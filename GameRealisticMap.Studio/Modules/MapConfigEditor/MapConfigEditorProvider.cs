@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Caliburn.Micro;
 using GameRealisticMap.Studio.Modules.Arma3Data;
 using GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels;
 using Gemini.Framework;
@@ -19,12 +20,14 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor
     {
         private readonly IShell _shell;
         private readonly IArma3DataModule _arma3DataModule;
+        private readonly IWindowManager _windowManager;
 
         [ImportingConstructor]
-        public MapConfigEditorProvider(IShell shell, IArma3DataModule arma3DataModule)
+        public MapConfigEditorProvider(IShell shell, IArma3DataModule arma3DataModule, IWindowManager windowManager)
         {
             _shell = shell;
             _arma3DataModule = arma3DataModule;
+            _windowManager = windowManager;
         }
 
         public IEnumerable<EditorFileType> FileTypes
@@ -42,7 +45,7 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor
             return string.Equals(Path.GetExtension(path), ".grma3m", StringComparison.OrdinalIgnoreCase);
         }
 
-        public IDocument Create() => new MapConfigEditorViewModel(_shell, _arma3DataModule);
+        public IDocument Create() => new MapConfigEditorViewModel(_shell, _arma3DataModule, _windowManager);
 
         public async Task New(IDocument document, string name) => await ((MapConfigEditorViewModel)document).New(name);
 

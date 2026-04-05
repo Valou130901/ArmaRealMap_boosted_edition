@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Geometries;
+using GameRealisticMap.Geometries;
 using OsmSharp.Tags;
 
 namespace GameRealisticMap.Nature.Surfaces
@@ -23,6 +23,12 @@ namespace GameRealisticMap.Nature.Surfaces
 
         protected override IEnumerable<TerrainPolygon> GetPriority(IBuildContext context)
         {
+            if (context.Options.OsmBoundaryId != null)
+            {
+                var oceanData = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
+                return oceanData.Land.SelectMany(p => p.InnerCrown(20f)).ToList();
+            }
+
             return Enumerable.Empty<TerrainPolygon>();
         }
     }

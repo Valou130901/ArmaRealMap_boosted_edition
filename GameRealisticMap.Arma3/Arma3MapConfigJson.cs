@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Configuration;
+using GameRealisticMap.Configuration;
 
 namespace GameRealisticMap.Arma3
 {
@@ -33,6 +33,8 @@ namespace GameRealisticMap.Arma3
         public float? PrivateServiceRoadThreshold { get; set; }
 
         public SatelliteImageOptions? Satellite { get; set; }
+
+        public long? OsmBoundaryId { get; set; }
 
         public Arma3MapConfig ToArma3MapConfig()
         {

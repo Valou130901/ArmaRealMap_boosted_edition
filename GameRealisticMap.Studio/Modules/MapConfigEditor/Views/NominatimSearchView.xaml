@@ -1,0 +1,50 @@
+<Window x:Class="GameRealisticMap.Studio.Modules.MapConfigEditor.Views.NominatimSearchView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GameRealisticMap.Studio.Modules.MapConfigEditor.Views"
+        xmlns:cal="http://www.caliburnproject.org"
+        mc:Ignorable="d"
+        Title="Search OSM Boundary (Nominatim)" Height="450" Width="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource EnvironmentWindowBackground}"
+        Foreground="{DynamicResource EnvironmentWindowText}">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0 0 0 10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Margin="0 0 10 0" cal:Message.Attach="[Key Enter] = [Action Search]" />
+            <Button Grid.Column="1" Padding="15 5" cal:Message.Attach="Search" Content="Search" IsEnabled="{Binding CanSearch}" />
+        </Grid>
+
+        <ListView Grid.Row="1" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="OSM ID" DisplayMemberBinding="{Binding OsmId}" Width="100"/>
+                    <GridViewColumn Header="Name" DisplayMemberBinding="{Binding DisplayName}" Width="400"/>
+                    <GridViewColumn Header="Type" DisplayMemberBinding="{Binding Type}" Width="80"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <Grid Grid.Row="2" Margin="0 10 0 0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Searching..." Visibility="{Binding IsSearching, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" FontStyle="Italic"/>
+            <Button Grid.Column="1" Padding="15 5" Margin="0 0 10 0" cal:Message.Attach="Accept" Content="Accept" IsDefault="True"/>
+            <Button Grid.Column="2" Padding="15 5" cal:Message.Attach="Cancel" Content="Cancel" IsCancel="True"/>
+        </Grid>
+    </Grid>
+</Window>

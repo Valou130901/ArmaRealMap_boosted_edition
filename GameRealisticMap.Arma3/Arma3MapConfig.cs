@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Arma3.GameEngine;
+using GameRealisticMap.Arma3.GameEngine;
 using GameRealisticMap.Configuration;
 using GameRealisticMap.Geometries;
 
@@ -69,6 +69,8 @@ namespace GameRealisticMap.Arma3
 
             Satellite = arma3MapConfigJson.Satellite ?? new SatelliteImageOptions();
 
+            OsmBoundaryId = arma3MapConfigJson.OsmBoundaryId;
+
             Arma3ConfigHelper.ValidatePboPrefix(PboPrefix);
             Arma3ConfigHelper.ValidateWorldName(WorldName);
         }
@@ -124,5 +126,7 @@ namespace GameRealisticMap.Arma3
         public int IdMapMultiplier { get; }
 
         public ISatelliteImageOptions Satellite { get; }
+
+        public long? OsmBoundaryId { get; }
     }
 }

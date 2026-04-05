@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1653,5 +1653,11 @@ Dernière génération le {1}</value>
   </data>
   <data name="IgnoreObjectsWillBeDistordedIfPitchOrRollIsUsedInEden" xml:space="preserve">
     <value>Ignorer (les objets seront déformés si pitch ou roll est utilisé dans Eden)</value>
+  </data>
+  <data name="GenerateSatMapFromIdMap" xml:space="preserve">
+    <value>Générer l'image satellite depuis le masque de texture</value>
+  </data>
+  <data name="GenerateSatMapFromIdMapButton" xml:space="preserve">
+    <value>Générer depuis le masque</value>
   </data>
 </root>

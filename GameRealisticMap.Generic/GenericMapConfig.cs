@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Configuration;
+using GameRealisticMap.Configuration;
 using GameRealisticMap.Generic.Profiles;
 using GameRealisticMap.Geometries;
 
@@ -33,6 +33,8 @@ namespace GameRealisticMap.Generic
             PrivateServiceRoadThreshold = genericMapConfigJson.PrivateServiceRoadThreshold ?? MapProcessingOptions.Default.PrivateServiceRoadThreshold;
 
             Satellite = genericMapConfigJson.Satellite ?? new SatelliteImageOptions();
+
+            OsmBoundaryId = genericMapConfigJson.OsmBoundaryId;
         }
 
         public TerrainAreaUTM TerrainArea { get; }
@@ -46,6 +48,8 @@ namespace GameRealisticMap.Generic
         public float PrivateServiceRoadThreshold { get; }
 
         public ISatelliteImageOptions Satellite { get; }
+
+        public long? OsmBoundaryId { get; }
 
         public static string GetAutomaticName(ITerrainArea area)
         {

@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Configuration;
+using GameRealisticMap.Configuration;
 
 namespace GameRealisticMap.Generic
 {
@@ -21,6 +21,8 @@ namespace GameRealisticMap.Generic
         public float? PrivateServiceRoadThreshold { get; set; }
 
         public SatelliteImageOptions? Satellite { get; set; }
+
+        public long? OsmBoundaryId { get; set; }
 
         public GenericMapConfig ToMapConfig()
         {

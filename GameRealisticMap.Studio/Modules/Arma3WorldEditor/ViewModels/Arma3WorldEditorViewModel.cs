@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -108,6 +108,18 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                 Imagery = ExistingImageryInfos.TryCreate(arma3Data.ProjectDrive, ConfigFile.PboPrefix, SizeInMeters!.Value);
 
                 Materials = await MaterialItem.Create(this, World, arma3Data.ProjectDrive, ConfigFile.PboPrefix);
+            }
+            else if (World != null)
+            {
+                var pboPrefix = World.MatNames.FirstOrDefault(m => m.Contains("data\\layers\\p_", StringComparison.OrdinalIgnoreCase));
+                if (pboPrefix != null)
+                {
+                    var index = pboPrefix.IndexOf("data\\layers\\p_", StringComparison.OrdinalIgnoreCase);
+                    pboPrefix = pboPrefix.Substring(0, index).TrimEnd('\\');
+                    
+                    Imagery = ExistingImageryInfos.TryCreate(arma3Data.ProjectDrive, pboPrefix, SizeInMeters!.Value);
+                    Materials = await MaterialItem.Create(this, World, arma3Data.ProjectDrive, pboPrefix);
+                }
             }
 
             if (Roads != null)
@@ -553,6 +565,10 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                     await lib.Resolve(definition.Material, definition.Surface, definition.Title);
                 }
             }
+            else if (Materials != null && Materials.Count > 0)
+            {
+                return new TerrainMaterialLibrary(Materials.Select(m => m.ToDefinition()).Where(m => m != null).ToList()!);
+            }
             return await lib.ToTerrainMaterialLibraryIdOnly();
         }
 
@@ -657,15 +673,61 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                 if (dialog.ShowDialog() == true)
                 {
                     var filename = dialog.FileName;
-                    var assets = await GetAssetsFromHistory() ?? await AskUserForAssets();
+                    var assets = await GetAssetsFromHistory();
+                    TerrainMaterialLibrary importLibrary;
                     if (assets != null)
                     {
-                        _ = IoC.Get<IProgressTool>()
-                            .RunTask(GameRealisticMap.Studio.Labels.ImportTextureMaskImage, ui => DoImport(ui, () => new ImageryImporter(arma3Data.ProjectDrive, assets.Materials, ui.Scope).UpdateIdMap(_imagery, filename)));
+                        importLibrary = assets.Materials;
                     }
+                    else if (Materials != null && Materials.Count > 0)
+                    {
+                        importLibrary = new TerrainMaterialLibrary(Materials.Select(m => m.ToDefinition()).Where(m => m != null).ToList()!);
+                    }
+                    else
+                    {
+                        assets = await AskUserForAssets();
+                        if (assets == null) return;
+                        importLibrary = assets.Materials;
+                    }
+                    _ = IoC.Get<IProgressTool>()
+                        .RunTask(GameRealisticMap.Studio.Labels.ImportTextureMaskImage, ui => DoImport(ui, () => new ImageryImporter(arma3Data.ProjectDrive, importLibrary, ui.Scope).UpdateIdMap(_imagery, filename)));
                 }
             }
         }
+        public async Task ImportSatMapFromIdMap()
+        {
+            if (_imagery != null)
+            {
+                if (string.IsNullOrEmpty(_imagery.PboPrefix))
+                {
+                    System.Windows.MessageBox.Show("PboPrefix is not defined in the map configuration.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
+
+                var idMapFile = arma3Data.ProjectDrive.GetFullPath($"{_imagery.PboPrefix}\\IdMap.png");
+                var satMapFile = arma3Data.ProjectDrive.GetFullPath($"{_imagery.PboPrefix}\\SatMap.png");
+
+                if (!File.Exists(idMapFile))
+                {
+                    System.Windows.MessageBox.Show($"File not found:\r\n{idMapFile}\r\n\r\nPlease ensure the IdMap.png has been generated or imported.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
+
+                var materials = await IoC.Get<GdtBrowserViewModel>().ToTerrainMaterialLibrary();
+
+                _ = IoC.Get<IProgressTool>()
+                        .RunTask("Generate SatMap from ID Map", async ui => {
+                            var step = ui.Scope.CreateInteger("Generate", 100);
+                            await Task.Run(() => SatMapFromIdMapGenerator.Generate(idMapFile, satMapFile, materials, new Progress<double>(p => step.Report((int)(p * 100)))));
+                            
+                            if (CanGenerateMod)
+                            {
+                                ui.AddSuccessAction(() => _ = GenerateMod(), Labels.GenerateModForArma3);
+                            }
+                        });
+            }
+        }
+
         public async Task ImportIdMapWithLibrary()
         {
             if (_imagery != null)

@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.ElevationModel.Constrained;
+using GameRealisticMap.ElevationModel.Constrained;
 using GameRealisticMap.Geometries;
 using GameRealisticMap.IO;
 using GameRealisticMap.ManMade;
@@ -21,6 +21,8 @@ namespace GameRealisticMap.ElevationModel
             var waterData = context.GetData<WatercoursesData>();
 
             var constraintGrid = new ElevationConstraintGrid(context.Area, raw.Elevation, scope);
+
+            new IslandElevationProcessor().Process(constraintGrid.Grid, context, scope, raw.Lakes);
 
             ProcessWays(constraintGrid, roadsData.Roads.Where(r => r.RoadType < RoadTypeId.Trail).WithProgress(scope, "Roads"));
 

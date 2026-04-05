@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -39,12 +39,14 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
     internal class MapConfigEditorViewModel : MapConfigEditorBase, IExplorerRootTreeItem, IMainDocument
     {
         private readonly IArma3DataModule _arma3DataModule;
+        private readonly IWindowManager _windowManager;
         private bool _showPreview;
 
-        public MapConfigEditorViewModel(IShell shell, IArma3DataModule arma3DataModule)
+        public MapConfigEditorViewModel(IShell shell, IArma3DataModule arma3DataModule, IWindowManager windowManager)
             : base(shell)
         {
             _arma3DataModule = arma3DataModule;
+            _windowManager = windowManager;
         }
 
         public List<string> BuiltinAssetConfigFiles { get; } = Arma3Assets.GetBuiltinList();
@@ -259,6 +261,8 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
             NotifyOfPropertyChange(nameof(AssetConfigFile));
             NotifyOfPropertyChange(nameof(UseColorCorrection));
             NotifyOfPropertyChange(nameof(UseRawColors));
+            NotifyOfPropertyChange(nameof(OsmBoundaryId));
+            NotifyOfPropertyChange(nameof(IsIsland));
             NotifyCoordinatesRelated();
             await CheckDependencies(); 
             await IoC.Get<IRecentFilesService>().AddRecentFile(filePath);
@@ -637,6 +641,47 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
         {
             get { return !UseColorCorrection; }
             set { UseColorCorrection = !value; }
+        }
+
+        public long? OsmBoundaryId
+        {
+            get { return Config.OsmBoundaryId; }
+            set
+            {
+                if (Config.OsmBoundaryId != value)
+                {
+                    Config.OsmBoundaryId = value;
+                    NotifyOfPropertyChange();
+                    NotifyOfPropertyChange(nameof(IsIsland));
+                    IsDirty = true;
+                }
+            }
+        }
+
+        public async Task SearchOsmBoundary()
+        {
+            var vm = new NominatimSearchViewModel();
+            var result = await _windowManager.ShowDialogAsync(vm);
+            if (result == true && vm.SelectedResult != null)
+            {
+                OsmBoundaryId = vm.SelectedResult.OsmId;
+            }
+        }
+
+        public bool IsIsland
+        {
+            get { return Config.OsmBoundaryId != null; }
+            set
+            {
+                if (value && Config.OsmBoundaryId == null)
+                {
+                    OsmBoundaryId = 0; // Default or trigger UI
+                }
+                else if (!value && Config.OsmBoundaryId != null)
+                {
+                    OsmBoundaryId = null;
+                }
+            }
         }
 
         public bool ShowPreview

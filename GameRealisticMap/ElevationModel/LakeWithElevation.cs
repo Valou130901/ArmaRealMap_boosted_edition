@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Geometries;
+using GameRealisticMap.Geometries;
 
 namespace GameRealisticMap.ElevationModel
 {
@@ -11,10 +11,10 @@ namespace GameRealisticMap.ElevationModel
             WaterElevation = waterElevation;
         }
 
-        public float BorderElevation { get; }
+        public float BorderElevation { get; set; }
 
         public TerrainPolygon TerrainPolygon { get; }
 
-        public float WaterElevation { get; }
+        public float WaterElevation { get; set; }
     }
 }

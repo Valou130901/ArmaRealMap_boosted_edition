@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Geometries;
+using GameRealisticMap.Geometries;
 using Pmad.ProgressTracking;
 
 namespace GameRealisticMap.Nature.Ocean
@@ -7,6 +7,20 @@ namespace GameRealisticMap.Nature.Ocean
     {
         public OceanData Build(IBuildContext context, IProgressScope scope)
         {
+            if (context.Options.OsmBoundaryId != null)
+            {
+                var relation = context.OsmSource.Relations.FirstOrDefault(r => r.Id == context.Options.OsmBoundaryId.Value);
+                if (relation != null)
+                {
+                    var islandLand = context.OsmSource.Interpret(relation)
+                        .SelectMany(g => TerrainPolygon.FromGeometry(g, context.Area.LatLngToTerrainPoint))
+                        .ToList();
+
+                    var islandOcean = context.Area.TerrainBounds.SubstractAll(islandLand).ToList();
+                    return new OceanData(islandOcean, islandLand, true);
+                }
+            }
+
             var coastlines = context.OsmSource.Ways
                 .Where(w => w.Tags != null && w.Tags.GetValue("natural") == "coastline")
                 .SelectMany(w => context.OsmSource.Interpret(w))

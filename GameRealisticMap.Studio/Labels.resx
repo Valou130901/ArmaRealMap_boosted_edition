@@ -1654,4 +1654,10 @@ Last generated on {1}</value>
   <data name="IgnoreObjectsWillBeDistordedIfPitchOrRollIsUsedInEden" xml:space="preserve">
     <value>Ignore (objects will be distorded if pitch or roll is used in Eden)</value>
   </data>
+  <data name="GenerateSatMapFromIdMap" xml:space="preserve">
+    <value>Generate satellite image from texture mask</value>
+  </data>
+  <data name="GenerateSatMapFromIdMapButton" xml:space="preserve">
+    <value>Generate from texture mask</value>
+  </data>
 </root>

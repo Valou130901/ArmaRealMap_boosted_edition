@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="GameRealisticMap.Studio.Modules.Arma3WorldEditor.Views.Arma3WorldEditorView"
+<UserControl x:Class="GameRealisticMap.Studio.Modules.Arma3WorldEditor.Views.Arma3WorldEditorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -147,6 +147,9 @@
                             <Line X1="1" X2="1" Y1="0" Y2="30" StrokeThickness="1" Height="30" Width="2" Stroke="Gray" Margin="5 0" VerticalAlignment="Center" />
                             <Button Margin="5" Padding="10" cal:Message.Attach="ImportSatMap">
                                 <Run Text="{x:Static r:Labels.ImportSatelliteImage}" />
+                            </Button>
+                            <Button Margin="5" Padding="10" cal:Message.Attach="ImportSatMapFromIdMap">
+                                <Run Text="Generate SatMap from IdMap" />
                             </Button>
                             <Button Margin="5" Padding="10" b:ButtonBehaviors.OpenContextOnClick="True">
                                 <Run Text="{x:Static r:Labels.ImportTextureMaskImage}" />
