@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using GameRealisticMap.Algorithms.Definitions;
 using GameRealisticMap.Conditions;
 using GameRealisticMap.Geometries;
@@ -42,7 +42,7 @@ namespace GameRealisticMap.Algorithms.Filling
         private List<AreaFillingBase<TModelInfo>> GetFillAreas(IEnumerable<TerrainPolygon> polygons, IConditionEvaluator conditionEvaluator)
         {
             var areas = new ConcurrentQueue<AreaFillingBase<TModelInfo>>();
-            Parallel.ForEach(polygons, new ParallelOptions() { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount * 3 / 4) }, poly =>
+            Parallel.ForEach(polygons, new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount }, poly =>
             {
                 if (poly.Area > 1)
                 {

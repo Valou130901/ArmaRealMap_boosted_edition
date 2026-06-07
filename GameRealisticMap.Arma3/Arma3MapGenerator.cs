@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Runtime.Versioning;
 using BIS.WRP;
 using GameRealisticMap.Arma3.Assets;
@@ -174,7 +174,7 @@ namespace GameRealisticMap.Arma3
             var result = new ConcurrentQueue<IEnumerable<TerrainBuilderObject>>();
             using (var scope = progress.CreateScope("Objects", generators.Generators.Count))
             {
-                await Parallel.ForEachAsync(generators.Generators, new ParallelOptions() { CancellationToken = progress.CancellationToken, MaxDegreeOfParallelism = 4 }, async (tb, _) =>
+                await Parallel.ForEachAsync(generators.Generators, new ParallelOptions() { CancellationToken = progress.CancellationToken, MaxDegreeOfParallelism = Environment.ProcessorCount }, async (tb, _) =>
                 {
                     result.Enqueue(await tb.Generate(config, context, scope));
                 });

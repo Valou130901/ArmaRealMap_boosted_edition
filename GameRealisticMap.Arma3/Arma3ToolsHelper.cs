@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using GameRealisticMap.Arma3.IO;
 using Microsoft.Win32;
@@ -109,7 +109,7 @@ namespace GameRealisticMap.Arma3
             string imageToPaaExe = Path.Combine(GetArma3ToolsPath(), "ImageToPAA", "ImageToPAA.exe");
             using var report = system.CreateInteger("Png->PAA", paths.Count);
             var options = new ParallelOptions() { 
-                MaxDegreeOfParallelism = maxDegreeOfParallelism ?? (Environment.ProcessorCount * 5 / 8) // ImageToPAA is very CPU aggressive
+                MaxDegreeOfParallelism = maxDegreeOfParallelism ?? Environment.ProcessorCount // Maximize CPU usage
             };
             await Parallel.ForEachAsync(paths, options, async (x, _) =>
             {
@@ -165,7 +165,7 @@ namespace GameRealisticMap.Arma3
             using var report = system.CreateInteger("Binarize RVMAT", paths.Count);
             var options = new ParallelOptions()
             {
-                MaxDegreeOfParallelism = maxDegreeOfParallelism ?? (Environment.ProcessorCount * 5 / 8) // ImageToPAA is very CPU aggressive
+                MaxDegreeOfParallelism = maxDegreeOfParallelism ?? Environment.ProcessorCount // Maximize CPU usage
             };
             await Parallel.ForEachAsync(paths, options, async (path, _) =>
             {

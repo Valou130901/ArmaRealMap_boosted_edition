@@ -1,6 +1,9 @@
-# Game Realistic Map
+# Game Realistic Map (Boosted Edition)
 
 ![](./GameRealisticMap.Studio/Resources/Icons/grms128.png)
+
+**Boosted Edition Features:**
+This fork has been optimized to fully utilize your CPU (100% of available logical cores) to make map generation as fast as possible. The original arbitrary thread limits have been removed, unlocking maximum performance for object generation, image conversion, and geometry filling processes.
 
 Game Realistic Map is a toolchain to generate realistic game maps from OpenStreetMap data.
 
