@@ -262,6 +262,7 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
             NotifyOfPropertyChange(nameof(UseColorCorrection));
             NotifyOfPropertyChange(nameof(UseRawColors));
             NotifyOfPropertyChange(nameof(OsmBoundaryId));
+            NotifyOfPropertyChange(nameof(OsmBoundaryName));
             NotifyOfPropertyChange(nameof(IsIsland));
             NotifyCoordinatesRelated();
             await CheckDependencies(); 
@@ -651,10 +652,45 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
                 if (Config.OsmBoundaryId != value)
                 {
                     Config.OsmBoundaryId = value;
+                    if (value == null)
+                    {
+                        OsmBoundaryName = null;
+                        _isIsland = false;
+                    }
+                    else
+                    {
+                        _isIsland = true;
+                    }
                     NotifyOfPropertyChange();
                     NotifyOfPropertyChange(nameof(IsIsland));
                     IsDirty = true;
                 }
+            }
+        }
+
+        public string OsmBoundaryName
+        {
+            get 
+            { 
+                if (!string.IsNullOrEmpty(Config.OsmBoundaryName))
+                    return Config.OsmBoundaryName;
+                if (Config.OsmBoundaryId != null)
+                    return Config.OsmBoundaryId.ToString();
+                return string.Empty;
+            }
+            set
+            {
+                if (long.TryParse(value, out var id))
+                {
+                    OsmBoundaryId = id;
+                    Config.OsmBoundaryName = null;
+                }
+                else
+                {
+                    Config.OsmBoundaryName = value;
+                }
+                NotifyOfPropertyChange();
+                IsDirty = true;
             }
         }
 
@@ -665,21 +701,75 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
             if (result == true && vm.SelectedResult != null)
             {
                 OsmBoundaryId = vm.SelectedResult.OsmId;
+                OsmBoundaryName = vm.SelectedResult.DisplayName;
+
+                if (vm.SelectedResult.BoundingBox != null && vm.SelectedResult.BoundingBox.Count == 4)
+                {
+                    if (double.TryParse(vm.SelectedResult.BoundingBox[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var latMin) &&
+                        double.TryParse(vm.SelectedResult.BoundingBox[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var latMax) &&
+                        double.TryParse(vm.SelectedResult.BoundingBox[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lonMin) &&
+                        double.TryParse(vm.SelectedResult.BoundingBox[3], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lonMax))
+                    {
+                        var centerLat = (latMin + latMax) / 2;
+                        var centerLon = (lonMin + lonMax) / 2;
+                        Center = $"{centerLat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{centerLon.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
+                        var R = 6371e3; // Earth radius in meters
+                        var phi1 = latMin * Math.PI / 180;
+                        var phi2 = latMax * Math.PI / 180;
+                        var deltaPhi = (latMax - latMin) * Math.PI / 180;
+                        var deltaLambda = (lonMax - lonMin) * Math.PI / 180;
+
+                        var a1 = Math.Sin(deltaPhi / 2) * Math.Sin(deltaPhi / 2);
+                        var c1 = 2 * Math.Atan2(Math.Sqrt(a1), Math.Sqrt(1 - a1));
+                        var heightMeters = R * c1;
+
+                        var a2 = Math.Cos(phi1) * Math.Cos(phi1) * Math.Sin(deltaLambda / 2) * Math.Sin(deltaLambda / 2);
+                        var c2 = 2 * Math.Atan2(Math.Sqrt(a2), Math.Sqrt(1 - a2));
+                        var widthMeters = R * c2;
+
+                        var maxDim = Math.Max(widthMeters, heightMeters);
+                        // Add some margin (e.g. 20%) to ensure the island fully fits with the beach buffer
+                        var requiredSize = maxDim * 1.2;
+
+                        MapSize = (float)requiredSize;
+                    }
+                }
             }
         }
 
+        private bool _isIsland;
         public bool IsIsland
         {
-            get { return Config.OsmBoundaryId != null; }
+            get { return Config.OsmBoundaryId != null || _isIsland; }
             set
             {
-                if (value && Config.OsmBoundaryId == null)
+                if (_isIsland != value)
                 {
-                    OsmBoundaryId = 0; // Default or trigger UI
+                    _isIsland = value;
+                    if (!value && Config.OsmBoundaryId != null)
+                    {
+                        OsmBoundaryId = null;
+                    }
+                    else if (value && Config.OsmBoundaryId == null)
+                    {
+                        _ = SearchOsmBoundary();
+                    }
+                    NotifyOfPropertyChange();
                 }
-                else if (!value && Config.OsmBoundaryId != null)
+            }
+        }
+
+        public bool UseSwisstopoElevation
+        {
+            get { return Config.UseSwisstopoElevation; }
+            set
+            {
+                if (Config.UseSwisstopoElevation != value)
                 {
-                    OsmBoundaryId = null;
+                    Config.UseSwisstopoElevation = value;
+                    NotifyOfPropertyChange();
+                    IsDirty = true;
                 }
             }
         }

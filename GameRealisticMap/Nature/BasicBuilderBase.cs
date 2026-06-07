@@ -1,8 +1,9 @@
-﻿using GameRealisticMap.ElevationModel;
+using GameRealisticMap.ElevationModel;
 using GameRealisticMap.Geometries;
 using GameRealisticMap.ManMade.Buildings;
 using GameRealisticMap.ManMade.Railways;
 using GameRealisticMap.ManMade.Roads;
+using GameRealisticMap.Nature.Ocean;
 using Pmad.ProgressTracking;
 
 namespace GameRealisticMap.Nature
@@ -16,11 +17,13 @@ namespace GameRealisticMap.Nature
             var railways = context.GetData<RailwaysData>();
             var lakes = context.GetData<ElevationWithLakesData>();
             var buildings = context.GetData<BuildingsData>();
+            var ocean = context.GetData<OceanData>();
 
             return buildings.Buildings.Select(b => b.Box.Polygon)
                 .Concat(roads.Roads.Where(r => r.RoadType != RoadTypeId.Trail).SelectMany(r => r.ClearPolygons))
                 .Concat(railways.Railways.SelectMany(r => r.ClearPolygons))
-                .Concat(lakes.Lakes.Select(l => l.TerrainPolygon));
+                .Concat(lakes.Lakes.Select(l => l.TerrainPolygon))
+                .Concat(ocean.Polygons);
         }
 
         protected abstract T CreateWrapper(List<TerrainPolygon> polygons);

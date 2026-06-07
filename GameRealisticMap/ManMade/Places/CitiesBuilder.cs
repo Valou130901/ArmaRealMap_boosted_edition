@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Geometries;
+using GameRealisticMap.Geometries;
 using OsmSharp;
 using OsmSharp.Geo;
 using OsmSharp.Tags;
@@ -20,7 +20,8 @@ namespace GameRealisticMap.ManMade.Places
                     var radius = 0f;
                     var boundaryPolygon = new List<TerrainPolygon>();
                     var center = context.Area.LatLngToTerrainPoint(node.GetCoordinate());
-                    if (context.Area.IsInside(center))
+                    var oceanData = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
+                    if (context.Area.IsInside(center) && (oceanData.Land.Count == 0 || oceanData.Land.Any(l => l.Contains(center))))
                     {
                         var tags = new TagsCollection(node.Tags);
 

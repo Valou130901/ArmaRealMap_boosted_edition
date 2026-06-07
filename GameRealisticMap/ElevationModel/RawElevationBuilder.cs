@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+using System.Numerics;
+using System.Net.Http;
 using GameRealisticMap.Configuration;
 using GameRealisticMap.Geometries;
 using GameRealisticMap.IO;
@@ -6,6 +7,8 @@ using GameRealisticMap.Nature.Ocean;
 using Pmad.Cartography;
 using Pmad.Cartography.Databases;
 using Pmad.Cartography.DataCells;
+using GameRealisticMap.Osm;
+using GeoAPI.Geometries;
 using Pmad.ProgressTracking;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
@@ -151,33 +154,53 @@ namespace GameRealisticMap.ElevationModel
 
             var dbCredits = new List<string>() { "SRTM1", "STRM15+" };
 
+            var clientFull = new HttpClient() { BaseAddress = sources.MapToolkitSRTM15Plus };
+            clientFull.DefaultRequestHeaders.Add("User-Agent", "GameRealisticMap/1.0");
+
+            var clientSrtm1 = new HttpClient() { BaseAddress = sources.MapToolkitSRTM1 };
+            clientSrtm1.DefaultRequestHeaders.Add("User-Agent", "GameRealisticMap/1.0");
+
+            var clientAw3d30 = new HttpClient() { BaseAddress = sources.MapToolkitAW3D30 };
+            clientAw3d30.DefaultRequestHeaders.Add("User-Agent", "GameRealisticMap/1.0");
+
+            var cachePath = Path.Combine(Path.GetTempPath(), "dem");
+
             // Elevation of ground, but really low resolution (460m at equator)
-            var fulldb = new DemDatabase(new DemHttpStorage(sources.MapToolkitSRTM15Plus));
+            var fulldb = new DemDatabase(new DemHttpStorage(cachePath, clientFull));
             var viewFull = (await fulldb.CreateView<float>(startView, endView)).ToDataCell();
             var detaildb = fulldb;
 
             // Elevation of surface, Partial world covergae, but better resolution (30m at equator)
-            var srtm = new DemDatabase(new DemHttpStorage(sources.MapToolkitSRTM1));
-            IDemDataCell view;
-            if (!await srtm.HasFullData(start, end))
+            var srtm = new DemDatabase(new DemHttpStorage(cachePath, clientSrtm1));
+            Func<Coordinates, double> view;
+
+            if (context.Options.UseSwisstopoElevation)
+            {
+                dbCredits.Add("Swisstopo swissALTI3D");
+                var downloader = await SwisstopoElevationDownloader.LoadAsync(scope, context.Area);
+                view = (c) => downloader.GetElevation(new Coordinate(c.Longitude, c.Latitude));
+            }
+            else if (!await srtm.HasFullData(start, end))
             {
                 // Alternative Elevation of surface, but requires JAXA credits
-                var aw3d30 = new DemDatabase(new DemHttpStorage(sources.MapToolkitAW3D30));
+                var aw3d30 = new DemDatabase(new DemHttpStorage(cachePath, clientAw3d30));
                 if (!await aw3d30.HasFullData(start, end))
                 {
-                    view = viewFull;
+                    view = (c) => viewFull.GetLocalElevation(c, DefaultInterpolation.Instance);
                 }
                 else
                 {
                     dbCredits.Add("AW3D30");
                     detaildb = aw3d30;
-                    view = (await aw3d30.CreateView<short>(startView, endView)).ToDataCell(); // TODO: check AW3D30 internal format
+                    var aw3d30view = (await aw3d30.CreateView<short>(startView, endView)).ToDataCell(); // TODO: check AW3D30 internal format
+                    view = (c) => aw3d30view.GetLocalElevation(c, DefaultInterpolation.Instance);
                 }
             }
             else
             {
                 detaildb = srtm;
-                view = (await srtm.CreateView<ushort>(startView, endView)).ToDataCell();
+                var srtmview = (await srtm.CreateView<ushort>(startView, endView)).ToDataCell();
+                view = (c) => srtmview.GetLocalElevation(c, DefaultInterpolation.Instance);
             }
 
             return new RawElevationSource(dbCredits, view, viewFull);

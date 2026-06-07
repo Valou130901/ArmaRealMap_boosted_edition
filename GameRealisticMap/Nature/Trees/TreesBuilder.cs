@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Geometries;
+using GameRealisticMap.Geometries;
 using GameRealisticMap.ManMade.Buildings;
 using GameRealisticMap.ManMade.Roads;
 using OsmSharp.Geo;
@@ -10,6 +10,7 @@ namespace GameRealisticMap.Nature.Trees
     {
         public TreesData Build(IBuildContext context, IProgressScope scope)
         {
+            var oceanData = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
             var keepWay = new TerrainSpacialIndex<ITerrainGeo>(context.Area);
             keepWay.AddRange(context.GetData<RoadsData>().Roads.SelectMany(b => b.Polygons));
             keepWay.AddRange(context.GetData<BuildingsData>().Buildings.Select(p => p.Box.Polygon));
@@ -18,7 +19,7 @@ namespace GameRealisticMap.Nature.Trees
                 .Where(n => n.Tags != null && n.Tags.GetValue("natural") == "tree")
                 .Select(t => context.Area.LatLngToTerrainPoint(t.GetCoordinate()))
                 .WithProgress(scope, "Trees")
-                .Where(p => context.Area.IsInside(p))
+                .Where(p => context.Area.IsInside(p) && (oceanData.Land.Count == 0 || oceanData.Land.Any(l => l.Contains(p))))
                 .Select(p => GeometryHelper.KeepAway(p, keepWay, 2))
                 .ToList();
 

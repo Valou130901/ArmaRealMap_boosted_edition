@@ -100,33 +100,110 @@ namespace GameRealisticMap.ElevationModel
         {
             var width = grid.Size;
             var height = grid.Size;
+            var step = grid.CellSize.X;
 
-            var image = new Image<L16>(width, height);
+            var image = new Image<L8>(width, height);
             image.Mutate(ctx => 
             {
                 ctx.Fill(Color.Black); // 0 means ocean
                 foreach (var poly in maskPolygons)
                 {
-                    PolygonDrawHelper.DrawPolygon(ctx, poly, new SolidBrush(Color.White), l => l.Select(p => new PointF(p.X / grid.CellSize.X, p.Y / grid.CellSize.Y)));
+                    var points = poly.Shell.Select(p => new PointF(p.X / step, p.Y / step)).ToArray();
+                    ctx.FillPolygon(Color.White, points);
                 }
-
-                // Smooth out the transition to ocean logic
-                ctx.GaussianBlur(OceanEdgeTransitionDistance / grid.CellSize.X);
             });
 
-            // image ranges from Black (Ocean) to White (Preserve elevation)
+            float[,] distances = new float[width, height];
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (image[x, y].PackedValue > 0)
+                        distances[x, y] = 0; // Inside island
+                    else
+                        distances[x, y] = float.MaxValue;
+                }
+            }
+
+            float d1 = 1f;
+            float d2 = 1.41421356f;
+
+            // Forward pass
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (distances[x, y] > 0)
+                    {
+                        float min = distances[x, y];
+                        if (x > 0 && distances[x - 1, y] + d1 < min) min = distances[x - 1, y] + d1;
+                        if (y > 0 && distances[x, y - 1] + d1 < min) min = distances[x, y - 1] + d1;
+                        if (x > 0 && y > 0 && distances[x - 1, y - 1] + d2 < min) min = distances[x - 1, y - 1] + d2;
+                        if (x < width - 1 && y > 0 && distances[x + 1, y - 1] + d2 < min) min = distances[x + 1, y - 1] + d2;
+                        distances[x, y] = min;
+                    }
+                }
+            }
+
+            // Backward pass
+            for (int y = height - 1; y >= 0; y--)
+            {
+                for (int x = width - 1; x >= 0; x--)
+                {
+                    if (distances[x, y] > 0)
+                    {
+                        float min = distances[x, y];
+                        if (x < width - 1 && distances[x + 1, y] + d1 < min) min = distances[x + 1, y] + d1;
+                        if (y < height - 1 && distances[x, y + 1] + d1 < min) min = distances[x, y + 1] + d1;
+                        if (x < width - 1 && y < height - 1 && distances[x + 1, y + 1] + d2 < min) min = distances[x + 1, y + 1] + d2;
+                        if (x > 0 && y < height - 1 && distances[x - 1, y + 1] + d2 < min) min = distances[x - 1, y + 1] + d2;
+                        distances[x, y] = min;
+                    }
+                }
+            }
+
+            float oceanTransitionDistance = 200f; // Distance over which it drops to ocean floor
+
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
-                    var weight = image[x, y].PackedValue / 65535f;
-                    
-                    var origElevation = grid[x, y];
-                    
-                    if (weight < 1f)
+                    float minDistance = distances[x, y] * step;
+
+                    if (minDistance == 0) // Inside island
                     {
-                        var targetOceanDepth = Math.Min(OceanFloorElevation, origElevation - 5f);
-                        grid[x, y] = (origElevation * weight) + (targetOceanDepth * (1f - weight));
+                        // Anti-flooding: force land to be at least 0.2m above water
+                        if (grid[x, y] < 0.2f)
+                        {
+                            grid[x, y] = 0.2f;
+                        }
+                    }
+                    else
+                    {
+                        var origElevation = grid[x, y];
+                        float beachBufferDistance = Math.Max(150f, origElevation * 10f); // 10% slope minimum, or 150m
+                        if (minDistance <= beachBufferDistance)
+                        {
+                            // Inside the beach buffer: we want a smooth transition from the edge elevation down to the water level (0m)
+                            // Use smoothstep for a more natural looking curve instead of linear
+                            float t = minDistance / beachBufferDistance;
+                            float weight = 1f - (t * t * (3f - 2f * t)); // Smoothstep(1, 0, t)
+                            
+                            // Blend towards a flat beach at 0.1m
+                            grid[x, y] = Math.Max(0.1f, origElevation * weight);
+                        }
+                        else if (minDistance <= beachBufferDistance + oceanTransitionDistance)
+                        {
+                            // Transition from 0.1m to OceanFloorElevation (-20m)
+                            float distInTransition = minDistance - beachBufferDistance;
+                            float weight = distInTransition / oceanTransitionDistance; // 0 to 1
+                            
+                            grid[x, y] = (0.1f * (1f - weight)) + (-20f * weight);
+                        }
+                        else
+                        {
+                            grid[x, y] = -20f;
+                        }
                     }
                 }
             }

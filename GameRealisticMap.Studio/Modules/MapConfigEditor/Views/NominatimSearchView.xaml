@@ -22,8 +22,8 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Margin="0 0 10 0" cal:Message.Attach="[Key Enter] = [Action Search]" />
-            <Button Grid.Column="1" Padding="15 5" cal:Message.Attach="Search" Content="Search" IsEnabled="{Binding CanSearch}" />
+            <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Margin="0 0 10 0" cal:Message.Attach="[Key Enter] = [Action DoSearch]" />
+            <Button Grid.Column="1" Padding="15 5" cal:Message.Attach="DoSearch" Content="Search" IsEnabled="{Binding CanSearch}" />
         </Grid>
 
         <ListView Grid.Row="1" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">

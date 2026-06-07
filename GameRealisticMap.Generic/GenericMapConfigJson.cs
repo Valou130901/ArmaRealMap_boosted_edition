@@ -24,6 +24,10 @@ namespace GameRealisticMap.Generic
 
         public long? OsmBoundaryId { get; set; }
 
+        public string? OsmBoundaryName { get; set; }
+
+        public bool? UseSwisstopoElevation { get; set; }
+
         public GenericMapConfig ToMapConfig()
         {
             return new GenericMapConfig(this);

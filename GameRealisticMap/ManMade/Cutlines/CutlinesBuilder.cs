@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using GameRealisticMap.Geometries;
 using OsmSharp.Tags;
 using Pmad.ProgressTracking;
@@ -9,6 +9,7 @@ namespace GameRealisticMap.ManMade.Cutlines
     {
         public CutlinesData Build(IBuildContext context, IProgressScope scope)
         {
+            var ocean = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
             var polygons = new List<TerrainPolygon>();
 
             foreach(var way in context.OsmSource.Ways
@@ -20,6 +21,7 @@ namespace GameRealisticMap.ManMade.Cutlines
                     .SelectMany(w => TerrainPath.FromGeometry(w, context.Area.LatLngToTerrainPoint))
                     .Where(p => p.EnveloppeIntersects(context.Area.TerrainBounds))
                     .SelectMany(p => p.ClippedBy(context.Area.TerrainBounds))
+                    .SelectMany(p => p.SubstractAll(ocean.Polygons))
                     .SelectMany(p => p.ToTerrainPolygon(GetWidth(way.Tags))));
             }
 

@@ -71,6 +71,8 @@ namespace GameRealisticMap.Arma3
 
             OsmBoundaryId = arma3MapConfigJson.OsmBoundaryId;
 
+            UseSwisstopoElevation = arma3MapConfigJson.UseSwisstopoElevation;
+
             Arma3ConfigHelper.ValidatePboPrefix(PboPrefix);
             Arma3ConfigHelper.ValidateWorldName(WorldName);
         }
@@ -128,5 +130,7 @@ namespace GameRealisticMap.Arma3
         public ISatelliteImageOptions Satellite { get; }
 
         public long? OsmBoundaryId { get; }
+
+        public bool UseSwisstopoElevation { get; }
     }
 }

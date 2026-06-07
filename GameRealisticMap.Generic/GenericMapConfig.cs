@@ -35,6 +35,8 @@ namespace GameRealisticMap.Generic
             Satellite = genericMapConfigJson.Satellite ?? new SatelliteImageOptions();
 
             OsmBoundaryId = genericMapConfigJson.OsmBoundaryId;
+
+            UseSwisstopoElevation = genericMapConfigJson.UseSwisstopoElevation ?? false;
         }
 
         public TerrainAreaUTM TerrainArea { get; }
@@ -50,6 +52,8 @@ namespace GameRealisticMap.Generic
         public ISatelliteImageOptions Satellite { get; }
 
         public long? OsmBoundaryId { get; }
+
+        public bool UseSwisstopoElevation { get; }
 
         public static string GetAutomaticName(ITerrainArea area)
         {

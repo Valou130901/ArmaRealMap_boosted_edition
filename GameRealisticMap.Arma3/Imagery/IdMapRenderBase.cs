@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Arma3.Assets;
+using GameRealisticMap.Arma3.Assets;
 using GameRealisticMap.ElevationModel;
 using GameRealisticMap.Geometries;
 using GameRealisticMap.ManMade;
@@ -52,7 +52,11 @@ namespace GameRealisticMap.Arma3.Imagery
                 DrawPolygons(config, d, TerrainMaterialUsage.DefaultIndustrial,
                     categories.Areas.Where(c => c.BuildingType == BuildingTypeId.Industrial).SelectMany(c => c.PolyList));
 
-                DrawPolygons(config, d, TerrainMaterialUsage.OceanGround, context.GetData<OceanData>().Polygons);
+                var oceanData = context.GetData<OceanData>();
+                if (!oceanData.IsIsland)
+                {
+                    DrawPolygons(config, d, TerrainMaterialUsage.OceanGround, oceanData.Polygons);
+                }
 
                 DrawPolygonsWithCrown(config, d, TerrainMaterialUsage.Coastline, 2.5f, context.GetData<CoastlineData>().Polygons);
 

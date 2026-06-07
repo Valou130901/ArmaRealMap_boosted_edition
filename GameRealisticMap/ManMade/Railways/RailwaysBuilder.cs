@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using GameRealisticMap.Geometries;
 using GameRealisticMap.ManMade.Roads;
 using Pmad.ProgressTracking;
@@ -16,7 +16,8 @@ namespace GameRealisticMap.ManMade.Railways
 
         public RailwaysData Build(IBuildContext context, IProgressScope scope)
         {
-            var nodes = context.OsmSource.All
+            var ocean = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
+            var nodes = context.OsmSource.Ways
                 .Where(s => s.Tags != null && IsRail(s.Tags.GetValue("railway")))
                 .ToList();
 
@@ -33,8 +34,9 @@ namespace GameRealisticMap.ManMade.Railways
             foreach (var way in nodes.WithProgress(scope, "Paths"))
             {
                 foreach (var segment in context.OsmSource.Interpret(way)
-                                                .SelectMany(geometry => TerrainPath.FromGeometry(geometry, context.Area.LatLngToTerrainPoint))
-                                                .SelectMany(path => path.ClippedBy(context.Area.TerrainBounds)))
+                                                .SelectMany(w => TerrainPath.FromGeometry(w, context.Area.LatLngToTerrainPoint))
+                                                .SelectMany(p => p.ClippedBy(context.Area.TerrainBounds))
+                                                .SelectMany(p => p.SubstractAll(ocean.Polygons)))
                 {
                     var special = WaySpecialSegmentHelper.FromOSM(way.Tags);
                     if (special == WaySpecialSegment.Normal)

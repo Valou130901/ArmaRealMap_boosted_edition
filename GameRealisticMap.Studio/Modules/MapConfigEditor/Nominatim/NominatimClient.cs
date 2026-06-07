@@ -20,6 +20,9 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.Nominatim
         [JsonPropertyName("type")]
         public string Type { get; set; }
 
+        [JsonPropertyName("boundingbox")]
+        public List<string>? BoundingBox { get; set; }
+
         public override string ToString()
         {
             return DisplayName;

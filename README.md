@@ -2,33 +2,38 @@
 
 ![](./GameRealisticMap.Studio/Resources/Icons/grms128.png)
 
-**Boosted Edition Features:**
-This fork has been optimized to fully utilize your CPU (100% of available logical cores) to make map generation as fast as possible. The original arbitrary thread limits have been removed, unlocking maximum performance for object generation, image conversion, and geometry filling processes.
+This fork is a heavily upgraded version of Game Realistic Map, specifically tailored to maximize performance, add high-resolution data support, and introduce advanced terrain generation features.
 
-Game Realistic Map is a toolchain to generate realistic game maps from OpenStreetMap data.
+## 🚀 Boosted Edition Exclusive Features
 
-It's designed to work in an highly automated process, and to be usable by most people.
+### ⚡ Maximum Performance (100% CPU Utilization)
+The original arbitrary thread limits have been completely removed. This fork fully utilizes 100% of your available logical cores, unlocking maximum performance and drastically reducing the time required for object generation, image conversion, and geometry filling processes.
 
-The "Game Realistic Map Studio" aims to guide you in the design steps and generation process.
+### 🏔️ Swisstopo swissALTI3D Support
+Added experimental, automatic integration for **Swisstopo swissALTI3D** high-resolution elevation data. When generating Swiss maps, the engine utilizes ultra-precise 2-meter resolution topography for breathtaking realism.
 
-Current version supports only Arma 3 as generation target.
+### 🏝️ Advanced Island Mode
+The Island Mode has been overhauled to produce much more natural coastlines:
+* **Realistic Coastal Buffers**: Automatically generates realistic flat beaches and shallow coastlines (150m buffer) that smoothly fade into the ocean floor over 200 meters, replacing the abrupt underwater cliffs of the original version.
+* **Anti-Flooding Security**: A new algorithm guarantees that no terrain inside the island boundaries will accidentally sink below sea level (minimum 0.2m elevation enforcement).
 
-## Documentation
+### 🗺️ Enhanced SatMap & IdMap Workflow
+* **SatMap Reconstruction**: You can now regenerate and export a corrected satellite map (`satmap_corrected.png`) directly from your edited `IdMap` and ground textures via a dedicated button in the World Editor.
+* **Improved UI & Nominatim Search**: Upgraded the Nominatim search interface to display full boundary names instead of raw IDs, making map area selection much more intuitive.
 
-[Documentation is available in the Wiki](https://github.com/jetelain/ArmaRealMap/wiki)
+### 📦 Upgraded Engine Dependencies
+Integrated an upgraded `bis-file-formats` library bringing:
+* Drastically reduced memory usage for WRP files.
+* Support for Arma 3's **ODOL v75** models and **Sqfc** compiled formats.
+* PAA encoder fixes and migration to modern ImageSharp for robust texture processing.
 
-## Legacy Arma Realistic Map
+---
 
-Looking for Arma Realistic Map / Arma Map Studio ? See [legacy documentation](./docs/legacy.md).
-Tools have been kept in repository, but might be broken. See `legacy` branch for last known valid version.
+*(All base features from the original Game Realistic Map toolchain are still supported.)*
 
-## Data sources
-
-  - NASA SRTM : https://www2.jpl.nasa.gov/srtm/ (automatic)
+## Data sources used in this edition
+  - NASA SRTM (automatic)
+  - JAXA AW3D30 (automatic)
   - OpenStreetMap (automatic)
-  - Sentinel-2 cloudless - https://s2maps.eu (automatic)
-  
-Generated maps MUST includes following credits :
-  - Elevation Model : NASA - Shuttle Radar Topography Mission (SRTM)
-  - Cartography : © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap Contributors</a> - released under <a href="https://opendatacommons.org/licenses/odbl/">Open Data Commons Open Database License (ODbL)</a> 
-  - Satellite image : <a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016 &amp; 2017) released under <a rel="license" href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>
+  - Sentinel-2 cloudless (automatic)
+  - **Swisstopo swissALTI3D (exclusive to this fork)**

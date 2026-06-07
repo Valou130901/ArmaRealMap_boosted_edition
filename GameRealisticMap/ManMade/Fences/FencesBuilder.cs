@@ -1,4 +1,4 @@
-﻿using GameRealisticMap.Geometries;
+using GameRealisticMap.Geometries;
 using OsmSharp.Tags;
 using Pmad.ProgressTracking;
 
@@ -25,6 +25,7 @@ namespace GameRealisticMap.ManMade.Fences
 
         public FencesData Build(IBuildContext context, IProgressScope scope)
         {
+            var ocean = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
             var nodes = context.OsmSource.All
                 .Where(s => s.Tags != null && s.Tags.ContainsKey("barrier"))
                 .ToList();
@@ -38,7 +39,8 @@ namespace GameRealisticMap.ManMade.Fences
                 {
                     foreach (var segment in context.OsmSource.Interpret(way)
                                                     .SelectMany(geometry => TerrainPath.FromGeometry(geometry, context.Area.LatLngToTerrainPoint))
-                                                    .SelectMany(path => path.ClippedBy(context.Area.TerrainBounds)))
+                                                    .SelectMany(path => path.ClippedBy(context.Area.TerrainBounds))
+                                                    .SelectMany(path => path.SubstractAll(ocean.Polygons)))
                     {
                         fences.Add(new Fence(segment, kind.Value));
                     }

@@ -705,7 +705,6 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                 }
 
                 var idMapFile = arma3Data.ProjectDrive.GetFullPath($"{_imagery.PboPrefix}\\IdMap.png");
-                var satMapFile = arma3Data.ProjectDrive.GetFullPath($"{_imagery.PboPrefix}\\SatMap.png");
 
                 if (!File.Exists(idMapFile))
                 {
@@ -713,18 +712,23 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                     return;
                 }
 
-                var materials = await IoC.Get<GdtBrowserViewModel>().ToTerrainMaterialLibrary();
+                var dialog = new SaveFileDialog();
+                dialog.Filter = "PNG|*.png";
+                dialog.FileName = Path.GetFileNameWithoutExtension(FileName) + "-satmap_corrected.png";
+                if (dialog.ShowDialog() == true)
+                {
+                    var satMapFile = dialog.FileName;
+                    var materials = await IoC.Get<GdtBrowserViewModel>().ToTerrainMaterialLibrary();
 
-                _ = IoC.Get<IProgressTool>()
-                        .RunTask("Generate SatMap from ID Map", async ui => {
-                            var step = ui.Scope.CreateInteger("Generate", 100);
-                            await Task.Run(() => SatMapFromIdMapGenerator.Generate(idMapFile, satMapFile, materials, new Progress<double>(p => step.Report((int)(p * 100)))));
-                            
-                            if (CanGenerateMod)
-                            {
-                                ui.AddSuccessAction(() => _ = GenerateMod(), Labels.GenerateModForArma3);
-                            }
-                        });
+                    _ = IoC.Get<IProgressTool>()
+                            .RunTask("Generate SatMap from ID Map", async ui => {
+                                var step = ui.Scope.CreateInteger("Generate", 100);
+                                await Task.Run(() => SatMapFromIdMapGenerator.Generate(idMapFile, satMapFile, materials, new Progress<double>(p => step.Report((int)(p * 100)))));
+                                
+                                ui.AddSuccessAction(() => ShellHelper.OpenUri(satMapFile), GameRealisticMap.Studio.Labels.OpenImage);
+                                ui.AddSuccessAction(() => ShellHelper.OpenUri(Path.GetDirectoryName(satMapFile)!), GameRealisticMap.Studio.Labels.OpenFolder);
+                            });
+                }
             }
         }
 

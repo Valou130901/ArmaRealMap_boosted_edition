@@ -178,14 +178,23 @@
                     </StackPanel>
                     <StackPanel Margin="10 5" Orientation="Horizontal" Visibility="{Binding IsIsland, Converter={StaticResource BooleanToVisibilityConverter}}" >
                         <Label Width="200">
-                            <Run Text="OSM Relation ID for Boundary"/>
+                            <Run Text="Island Boundary"/>
                         </Label>
-                        <TextBox Width="150" Padding="3" Text="{Binding OsmBoundaryId, Mode=TwoWay, ValidatesOnExceptions=True}" />
+                        <TextBox Width="250" Padding="3" Text="{Binding OsmBoundaryName, Mode=TwoWay}" />
                         <Button Margin="5 0 0 0" Padding="10 0" cal:Message.Attach="SearchOsmBoundary">
                             <Run Text="Search..." />
                         </Button>
                         <TextBlock Margin="10 3" FontStyle="Italic" VerticalAlignment="Center">
-                            <Run Text="Enter the OSM Relation ID for the island." />
+                            <Run Text="Select the OSM boundary." />
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Margin="10 5" Orientation="Horizontal" >
+                        <Label Width="200">
+                            <Run Text="Swisstopo high-res elevation"/>
+                        </Label>
+                        <CheckBox VerticalAlignment="Center" IsChecked="{Binding UseSwisstopoElevation, Mode=TwoWay}" />
+                        <TextBlock Margin="10 3" Foreground="Orange" FontStyle="Italic" VerticalAlignment="Center">
+                            <Run Text="Warning: Only works for maps in Switzerland. Downloads huge amounts of data." />
                         </TextBlock>
                     </StackPanel>
                 </StackPanel>

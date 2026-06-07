@@ -1,4 +1,4 @@
-﻿using GeoAPI.Geometries;
+using GeoAPI.Geometries;
 using Pmad.Cartography;
 using Pmad.Cartography.Databases;
 using Pmad.Cartography.DataCells;
@@ -7,10 +7,10 @@ namespace GameRealisticMap.ElevationModel
 {
     internal class RawElevationSource
     {
-        private readonly IDemDataCell surfaceOnly;
+        private readonly Func<Coordinates, double> surfaceOnly;
         private readonly IDemDataCell ground;
 
-        public RawElevationSource(List<string> dbCredits, IDemDataCell view, IDemDataCell viewFull)
+        public RawElevationSource(List<string> dbCredits, Func<Coordinates, double> view, IDemDataCell viewFull)
         {
             this.Credits = dbCredits;
             this.surfaceOnly = view;
@@ -35,7 +35,7 @@ namespace GameRealisticMap.ElevationModel
 
         private double GetOceanDepth(Coordinate latLong)
         {
-            var elevation = GetElevationBilinear(ground, latLong.Y, latLong.X);
+            var elevation = ground.GetLocalElevation(new Coordinates(latLong.Y, latLong.X), DefaultInterpolation.Instance);
             if (elevation > -1)
             {
                 return -1;
@@ -45,7 +45,7 @@ namespace GameRealisticMap.ElevationModel
 
         private double GetSurfaceElevation(Coordinate latLong)
         {
-            var elevation = GetElevationBilinear(surfaceOnly, latLong.Y, latLong.X);
+            var elevation = surfaceOnly(new Coordinates(latLong.Y, latLong.X));
             if (double.IsNaN(elevation) || elevation < 0.5f)
             {
                 elevation = 0.5f;
@@ -53,15 +53,10 @@ namespace GameRealisticMap.ElevationModel
             return elevation;
         }
 
-        private double GetElevationBilinear(IDemDataCell view, double lat, double lon)
-        {
-            return view.GetLocalElevation(new Coordinates(lat, lon), DefaultInterpolation.Instance);
-        }
-
         internal double GetElevationNoMask(Coordinate latLong)
         {
             var point = new Coordinates(latLong.Y, latLong.X);
-            var detail = surfaceOnly.GetLocalElevation(point, DefaultInterpolation.Instance);
+            var detail = surfaceOnly(point);
             if (double.IsNaN(detail) || Math.Abs(detail) < 0.1)
             {
                 return ground.GetLocalElevation(point, DefaultInterpolation.Instance);

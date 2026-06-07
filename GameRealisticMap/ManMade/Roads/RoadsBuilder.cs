@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using GameRealisticMap.Geometries;
 using GameRealisticMap.IO;
@@ -90,8 +90,11 @@ namespace GameRealisticMap.ManMade.Roads
             return roads.Where(r => r != self && r.RoadType == self.RoadType && r.SpecialSegment == self.SpecialSegment && (TerrainPoint.Equals(r.Path.FirstPoint,point) || TerrainPoint.Equals(r.Path.LastPoint,point))).ToList();
         }
 
-        internal List<Road> PrepareRoads(IOsmDataSource osm, ITerrainArea area, IProgressScope scope)
+        internal List<Road> PrepareRoads(IBuildContext context, IProgressScope scope)
         {
+            var area = context.Area;
+            var osm = context.OsmSource;
+            var ocean = context.GetData<GameRealisticMap.Nature.Ocean.OceanData>();
             // Do not process bridges that length is not significantly larger than grid cell size, because they wont be noticiable
             var strictBridgeMinimalLength = area.GridCellSize * 1.25f;
 
@@ -109,8 +112,10 @@ namespace GameRealisticMap.ManMade.Roads
                     {
                         foreach (var path in TerrainPath.FromGeometry(geometry, area.LatLngToTerrainPoint))
                         {
-                            foreach (var pathSegment in path.ClippedBy(area.TerrainBounds))
+                            foreach (var inBounds in path.ClippedBy(area.TerrainBounds))
                             {
+                                foreach (var pathSegment in inBounds.SubstractAll(ocean.Polygons))
+                                {
                                 if (special == WaySpecialSegment.Bridge)
                                 {
                                     var bridgeInfos = library.GetBridge(type.Id);
@@ -120,6 +125,7 @@ namespace GameRealisticMap.ManMade.Roads
                                     }
                                 }
                                 roads.Add(new Road(special, pathSegment, type));
+                                }
                             }
                         }
                     }
@@ -134,7 +140,7 @@ namespace GameRealisticMap.ManMade.Roads
             return new RoadsData(
                 IgnoreSmallIsolated(
                     MergeRoads(
-                        PrepareRoads(context.OsmSource, context.Area, scope), scope), 
+                        PrepareRoads(context, scope), scope), 
                     context.Options, scope)
                 );
         }

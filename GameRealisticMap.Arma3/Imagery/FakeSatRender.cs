@@ -1,4 +1,4 @@
-﻿using BIS.PAA;
+using BIS.PAA;
 using GameRealisticMap.Arma3.Assets;
 using GameRealisticMap.Arma3.IO;
 using GameRealisticMap.Geometries;
@@ -38,7 +38,7 @@ namespace GameRealisticMap.Arma3.Imagery
             var image = new Image<Rgba32>(size, size);
             image.Mutate(d =>
             {
-                d.Fill(GetBrush(materialLibrary.GetMaterialByUsage(isIsland ? TerrainMaterialUsage.OceanGround : TerrainMaterialUsage.Default)));
+                d.Fill(GetBrush(materialLibrary.GetMaterialByUsage(TerrainMaterialUsage.Default)));
                 d.GaussianBlur(1.5f);
             });
             return image;

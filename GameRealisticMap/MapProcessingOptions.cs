@@ -20,5 +20,7 @@ namespace GameRealisticMap
         public ISatelliteImageOptions Satellite => new SatelliteImageOptions();
 
         public long? OsmBoundaryId { get; }
+
+        public bool UseSwisstopoElevation { get; }
     }
 }

@@ -63,7 +63,7 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
 
         public bool CanSearch => !string.IsNullOrWhiteSpace(SearchText) && !IsSearching;
 
-        public async Task Search()
+        public async Task DoSearch()
         {
             IsSearching = true;
             try

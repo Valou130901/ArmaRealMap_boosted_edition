@@ -111,13 +111,13 @@ namespace GameRealisticMap.ElevationModel
             var lengthFromStart = 0f;
             var points = GeometryHelper.PointsOnPath(road.Path.Points, stepSize).Select(constraintGrid.NodeHard).ToList();
             var totalLength = points.Take(points.Count - 1).Zip(points.Skip(1)).Sum(segment => (segment.Second.Point.Vector - segment.First.Point.Vector).Length());
-            var smooth = constraintGrid.CreateSmoothSegment(start, road.Width * 4f);
+            var smooth = constraintGrid.CreateSmoothSegment(start, road.ClearWidth * 4f);
             foreach (var segment in points.Take(points.Count - 1).Zip(points.Skip(1)))
             {
                 if (segment.First != segment.Second)
                 {
                     var delta = segment.Second.Point.Vector - segment.First.Point.Vector;
-                    constraintGrid.AddFlatSegmentHard(segment.First, delta, road.Width);
+                    constraintGrid.AddFlatSegmentHard(segment.First, delta, road.ClearWidth);
                     if (segment.First.Elevation == null)
                     {
                         var elevation = start.Elevation.Value + ((stop.Elevation.Value - start.Elevation.Value) * (lengthFromStart / totalLength));
@@ -133,13 +133,13 @@ namespace GameRealisticMap.ElevationModel
             var stepSize = GetStepSize(constraintGrid);
             var lengthFromStart = 0f;
             var points = GeometryHelper.PointsOnPath(road.Path.Points, stepSize).Select(constraintGrid.NodeHard).ToList();
-            var smooth = constraintGrid.CreateSmoothSegment(constraintGrid.NodeHard(road.Path.FirstPoint), road.Width * 4f);
+            var smooth = constraintGrid.CreateSmoothSegment(constraintGrid.NodeHard(road.Path.FirstPoint), road.ClearWidth * 4f);
             foreach (var segment in points.Take(points.Count - 1).Zip(points.Skip(1)))
             {
                 if (segment.First != segment.Second)
                 {
                     var delta = segment.Second.Point.Vector - segment.First.Point.Vector;
-                    constraintGrid.AddFlatSegmentHard(segment.First, delta, road.Width);
+                    constraintGrid.AddFlatSegmentHard(segment.First, delta, road.ClearWidth);
                     lengthFromStart += delta.Length();
                     smooth.Add(lengthFromStart, segment.Second);
                 }

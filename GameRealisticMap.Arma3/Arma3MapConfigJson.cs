@@ -36,6 +36,10 @@ namespace GameRealisticMap.Arma3
 
         public long? OsmBoundaryId { get; set; }
 
+        public string? OsmBoundaryName { get; set; }
+
+        public bool UseSwisstopoElevation { get; set; }
+
         public Arma3MapConfig ToArma3MapConfig()
         {
             return new Arma3MapConfig(this);

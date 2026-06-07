@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Numerics;
 using GameRealisticMap.Algorithms;
 using GameRealisticMap.Geometries;
@@ -6,6 +6,7 @@ using GameRealisticMap.ManMade.Roads;
 using GameRealisticMap.Osm;
 using OsmSharp.Geo;
 using Pmad.ProgressTracking;
+using GameRealisticMap.Nature.Ocean;
 
 namespace GameRealisticMap.ManMade.Buildings
 {
@@ -22,8 +23,9 @@ namespace GameRealisticMap.ManMade.Buildings
         {
             var roads = context.GetData<RoadsData>();
             var categorizers = context.GetData<CategoryAreaData>();
+            var ocean = context.GetData<OceanData>();
 
-            var pass1 = DetectBuildingsBoundingRects(context.OsmSource, context.Area, scope);
+            var pass1 = DetectBuildingsBoundingRects(context.OsmSource, context.Area, ocean, scope);
             //Preview(data, removed, pass1, "buildings-pass1.png");
 
             var pass2 = MergeSmallBuildings(pass1, context.Area, scope);
@@ -320,7 +322,7 @@ namespace GameRealisticMap.ManMade.Buildings
             return pass4.ToList();
         }
 
-        private List<BuildingCandidate> DetectBuildingsBoundingRects(IOsmDataSource osm, ITerrainArea area, IProgressScope scope)
+        private List<BuildingCandidate> DetectBuildingsBoundingRects(IOsmDataSource osm, ITerrainArea area, OceanData ocean, IProgressScope scope)
         {
             var buildings = osm.All.Where(o => o.Tags != null && o.Tags.ContainsKey("building")).ToList();
             var manMadeAreas = osm.Ways.Where(o => o.Tags != null && o.Tags.ContainsKey("man_made") && !o.Tags.ContainsKey("building")).ToList();
@@ -336,7 +338,7 @@ namespace GameRealisticMap.ManMade.Buildings
                 {
                     foreach (var poly in TerrainPolygon.FromGeometry(geometry, area.LatLngToTerrainPoint))
                     {
-                        if (areaEnveloppe.EnveloppeContains(poly))
+                        if (areaEnveloppe.EnveloppeContains(poly) && !ocean.Polygons.Any(o => o.Intersects(poly)))
                         { 
                             candidateSurfaces.Add(new BuildingCandidate(poly, BuildingTypeIdHelper.FromOSM(building.Tags)));
                         }
@@ -354,7 +356,7 @@ namespace GameRealisticMap.ManMade.Buildings
                     {
                         foreach (var poly in TerrainPolygon.FromGeometry(geometry, area.LatLngToTerrainPoint))
                         {
-                            if (areaEnveloppe.EnveloppeContains(poly))
+                            if (areaEnveloppe.EnveloppeContains(poly) && !ocean.Polygons.Any(o => o.Intersects(poly)))
                             {
                                 candidateSurfaces.Add(new BuildingCandidate(poly, type));
                             }
