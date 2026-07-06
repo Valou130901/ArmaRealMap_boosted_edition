@@ -1,6 +1,8 @@
 ﻿using System.Text;
 using CommandLine;
 using GameRealisticMap.Arma3.GameEngine;
+using GameRealisticMap.Reforger;
+using GameRealisticMap.Reforger.Assets;
 using GameRealisticMap.Reporting;
 
 namespace GameRealisticMap.Arma3.CommandLine
@@ -11,12 +13,13 @@ namespace GameRealisticMap.Arma3.CommandLine
         {
             try
             {
-                return await Parser.Default.ParseArguments<GenerateObjectLayerOptions, GenerateWrpOptions, GenerateModOptions, GenerateTerrainBuilderOptions>(args)
+                return await Parser.Default.ParseArguments<GenerateObjectLayerOptions, GenerateWrpOptions, GenerateModOptions, GenerateTerrainBuilderOptions, GenerateReforgerOptions>(args)
                   .MapResult(
                     (GenerateObjectLayerOptions opts) => GenerateObjectLayer(opts),
                     (GenerateWrpOptions opts) => GenerateWrp(opts),
                     (GenerateModOptions opts) => GenerateMod(opts),
                     (GenerateTerrainBuilderOptions opts) => GenerateTerrainBuilder(opts),
+                    (GenerateReforgerOptions opts) => GenerateReforger(opts),
                     errs => Task.FromResult(1));
             }
             catch (Exception ex)
@@ -32,6 +35,16 @@ namespace GameRealisticMap.Arma3.CommandLine
             var generator = new Arma3TerrainBuilderGenerator(workspace.Assets, workspace.ProjectDrive, workspace.Sources);
             Directory.CreateDirectory(opts.TargetDirectory);
             await generator.GenerateTerrainBuilderFiles(workspace.Progress, workspace.MapConfig, opts.TargetDirectory);
+            return 0;
+        }
+
+        private static async Task<int> GenerateReforger(GenerateReforgerOptions opts)
+        {
+            using var workspace = await opts.CreateWorkspace();
+            var mapping = ReforgerAssetMapping.LoadFromFileOrDefault(opts.MappingFile);
+            var generator = new ReforgerMapGenerator(workspace.Assets, workspace.ProjectDrive, workspace.Sources, mapping);
+            Directory.CreateDirectory(opts.TargetDirectory);
+            await generator.GenerateReforgerFiles(workspace.Progress, workspace.MapConfig, opts.TargetDirectory);
             return 0;
         }
 

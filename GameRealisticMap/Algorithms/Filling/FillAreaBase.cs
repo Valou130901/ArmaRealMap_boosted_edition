@@ -31,7 +31,7 @@ namespace GameRealisticMap.Algorithms.Filling
             {
                 var generatedItems = 0;
                 var toprocess = areas.OrderByDescending(r => r.ItemsToAdd).ToList();
-                Parallel.For(0, Math.Max(2, Environment.ProcessorCount * 3 / 4), _ =>
+                Parallel.For(0, Math.Max(2, Environment.ProcessorCount), _ =>
                 {
                     FillAreaList(toprocess, objects, report, conditionEvaluator, ref generatedItems);
                 });

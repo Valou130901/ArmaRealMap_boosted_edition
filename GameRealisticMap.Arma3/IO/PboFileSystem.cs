@@ -17,7 +17,8 @@ namespace GameRealisticMap.Arma3.IO
         private readonly IEnumerable<string> gamePaths;
         private readonly IEnumerable<string> mods;
         private readonly Dictionary<string, IPBOFileEntry> index = new(StringComparer.OrdinalIgnoreCase);
-        private bool isIndexReady = false;
+        private readonly object indexLock = new object();
+        private volatile bool isIndexReady = false;
 
         public PboFileSystem(IEnumerable<string> gamePaths, IEnumerable<string> mods)
         {
@@ -119,8 +120,14 @@ namespace GameRealisticMap.Arma3.IO
         {
             if (!isIndexReady)
             {
-                isIndexReady = true;
-                BuildIndex();
+                lock (indexLock)
+                {
+                    if (!isIndexReady)
+                    {
+                        BuildIndex();
+                        isIndexReady = true;
+                    }
+                }
             }
         }
 

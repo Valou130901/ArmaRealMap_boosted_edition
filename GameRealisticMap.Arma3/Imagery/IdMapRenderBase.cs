@@ -86,6 +86,14 @@ namespace GameRealisticMap.Arma3.Imagery
 
                 DrawPolygons(config, d, TerrainMaterialUsage.Asphalt, context.GetData<AsphaltData>().Polygons);
 
+                if (oceanData.IsIsland)
+                {
+                    // Island mode: OSM land-use data extends beyond the island boundary, paint the
+                    // seabed last so everything outside the boundary gets the ocean ground material,
+                    // then restore the beach strip along the boundary.
+                    DrawPolygons(config, d, TerrainMaterialUsage.OceanGround, oceanData.Polygons);
+                    DrawPolygonsWithCrown(config, d, TerrainMaterialUsage.Coastline, 2.5f, context.GetData<CoastlineData>().Polygons);
+                }
             });
 
             return image;

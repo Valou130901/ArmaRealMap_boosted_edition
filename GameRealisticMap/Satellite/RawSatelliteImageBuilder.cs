@@ -109,7 +109,7 @@ namespace GameRealisticMap.Satellite
                 var oceanColor = new Rgba32(10, 28, 48); // Dark blue ocean water
                 var shallowColor = new Rgba32(30, 80, 120); // Lighter blue for shallow water
 
-                for (int y = 0; y < part.RealRectangle.Height; y++)
+                Parallel.For(0, part.RealRectangle.Height, y =>
                 {
                     for (int x = 0; x < part.RealRectangle.Width; x++)
                     {
@@ -167,7 +167,7 @@ namespace GameRealisticMap.Satellite
                                 (byte)(orig.R * (1f - depthWeight) + pureWaterColor.R * depthWeight),
                                 (byte)(orig.G * (1f - depthWeight) + pureWaterColor.G * depthWeight),
                                 (byte)(orig.B * (1f - depthWeight) + pureWaterColor.B * depthWeight),
-                                255
+                                orig.A // Keep source alpha: 'No Data' tiles must still fall back to fakeColor below
                             );
                         }
 
@@ -183,7 +183,7 @@ namespace GameRealisticMap.Satellite
                             255
                         );
                     }
-                }
+                });
             }
 
             if ( options.Brightness != 1f || options.Contrast != 1f || options.Saturation != 1f)

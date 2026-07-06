@@ -116,33 +116,54 @@ namespace GameRealisticMap.Arma3.GameEngine
 
         private void CreateFakeConfig(string targetFile, string tempRoot, IReadOnlyCollection<string> usedModels)
         {
+            var models = usedModels.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var landClasses = new string?[models.Count];
+
+            using (var report = progress.CreateInteger("Prepare models", models.Count))
+            {
+                Parallel.For(0, models.Count, new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
+                {
+                    var model = models[i];
+                    var modelTemp = Path.Combine(tempRoot, model);
+                    // Game models are immutable: copies from a previous run can be reused as-is
+                    if (!File.Exists(modelTemp))
+                    {
+                        using (var sourceStream = projectDrive.OpenFileIfExists(model))
+                        {
+                            if (sourceStream != null)
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(modelTemp)!);
+                                // Copy to a temporary name then move, to never leave a partial file behind
+                                var modelTempPartial = modelTemp + ".grm-tmp";
+                                using (var targetStream = File.Create(modelTempPartial))
+                                {
+                                    sourceStream.CopyTo(targetStream);
+                                }
+                                File.Move(modelTempPartial, modelTemp, true);
+                            }
+                        }
+                    }
+
+                    // Only the model class is needed: read the model info header instead of the full ODOL
+                    var modelInfo = modelInfoLibrary.ReadModelInfoOnly(model);
+                    if (modelInfo != null && ClassWithLandConfig.Contains(modelInfo.Class))
+                    {
+                        landClasses[i] = $"class land_{Path.GetFileNameWithoutExtension(model)};";
+                    }
+                    report.ReportOneDone();
+                });
+            }
+
             var sw = new StringWriter();
             sw.WriteLine("// GRM::ONLY FOR BINARIZE, you can safely ignore or delete this file");
             sw.WriteLine(@"#include ""config-initial.hpp""");
-            sw.WriteLine("class cfgVehicles"); 
+            sw.WriteLine("class cfgVehicles");
             sw.WriteLine("{");
-            foreach (var model in usedModels.WithProgress(progress, "Prepare models"))
+            foreach (var landClass in landClasses)
             {
-                using (var sourceStream = projectDrive.OpenFileIfExists(model))
+                if (landClass != null)
                 {
-                    if (sourceStream != null)
-                    {
-                        var modelTemp = Path.Combine(tempRoot, model);
-                        Directory.CreateDirectory(Path.GetDirectoryName(modelTemp)!);
-                        using (var targetStream = File.Create(modelTemp))
-                        {
-                            sourceStream.CopyTo(targetStream);
-                        }
-                    }
-                }
-
-                var odol = modelInfoLibrary.ReadODOL(model);
-                if (odol != null)
-                {
-                    if (IsLandConfigRequired(odol))
-                    {
-                        sw.WriteLine($"class land_{Path.GetFileNameWithoutExtension(model)};");
-                    }
+                    sw.WriteLine(landClass);
                 }
             }
             sw.WriteLine("};");
@@ -156,16 +177,5 @@ namespace GameRealisticMap.Arma3.GameEngine
             "housesimulated",
             "tower"
         };
-
-
-        private bool IsLandConfigRequired(ODOL odol)
-        {
-            if (ClassWithLandConfig.Contains(odol.ModelInfo.Class))
-            {
-                return true;
-            }
-
-            return false;
-        }
     }
 }

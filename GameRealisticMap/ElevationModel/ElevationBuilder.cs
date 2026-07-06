@@ -22,7 +22,8 @@ namespace GameRealisticMap.ElevationModel
 
             var constraintGrid = new ElevationConstraintGrid(context.Area, raw.Elevation, scope);
 
-            new IslandElevationProcessor().Process(constraintGrid.Grid, context, scope, raw.Lakes);
+            var islandProcessor = new IslandElevationProcessor();
+            islandProcessor.Process(constraintGrid.Grid, context, scope, raw.Lakes);
 
             ProcessWays(constraintGrid, roadsData.Roads.Where(r => r.RoadType < RoadTypeId.Trail).WithProgress(scope, "Roads"));
 
@@ -33,6 +34,8 @@ namespace GameRealisticMap.ElevationModel
             ProtectLakes(constraintGrid, raw.Lakes, context.Area, scope);
 
             constraintGrid.SolveAndApplyOnGrid();
+
+            islandProcessor.EnforceLandAboveOcean(constraintGrid.Grid);
 
             return new ElevationData(constraintGrid.Grid);
         }
@@ -157,7 +160,8 @@ namespace GameRealisticMap.ElevationModel
             // Result was not really good with lower CellSize (Studio tries to keep cellsize between 2 and 8m)
             // 1/4 of cell size let have at worst case 3 points within each cell wich is far enough to keep roads flat
             // In the future, could be changed to 1/3, but need some automated tests to ensure result quality
-            return constraintGrid.Grid.CellSize.X / 4;
+            // Floor at 0.5m: below 2m cells the road node density explodes and makes the solver dramatically slower
+            return Math.Max(0.5f, constraintGrid.Grid.CellSize.X / 4);
         }
 
         private void ProcessRoadBridge(IWay road, ElevationConstraintGrid constraintGrid)

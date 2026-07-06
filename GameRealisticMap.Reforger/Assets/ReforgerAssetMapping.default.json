@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "Maps Arma 3 model names (as resolved by the loaded GRM asset config) to Arma Reforger prefab ResourceNames.",
+    "A ResourceName looks like \"{GUID}Prefabs/.../name.et\". The GUID is stable for vanilla assets.",
+    "Only the spruce GUID below is confirmed from the Import Objects Extended example file.",
+    "To get a GUID for any other prefab: in Enfusion Resource Manager, right-click the .et > Copy resource name.",
+    "Models with no mapping are exported WITHOUT a prefab (7-token lines): assign a prefab pool per-layer",
+    "in the 'Import Objects Extended' tool UI when importing that layer's .csv."
+  ],
+  "exact": {},
+  "keywords": [
+    {
+      "match": ["picea", "spruce", "fir_", "_fir", "pine", "pinus", "larix", "larch", "conifer", "abies"],
+      "prefab": "{83E7EA2D55140839}Prefabs/Vegetation/Tree/t_picea_abies_1f.et"
+    }
+  ],
+  "fallback": null
+}

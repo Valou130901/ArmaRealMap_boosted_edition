@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GameRealisticMap.Arma3\GameRealisticMap.Arma3.csproj" />
+    <ProjectReference Include="..\GameRealisticMap.Reforger\GameRealisticMap.Reforger.csproj" />
     <ProjectReference Include="..\GameRealisticMap\GameRealisticMap.csproj" />
   </ItemGroup>
 

@@ -57,6 +57,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatasetGenerator", "tests\D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatasetsLoader", "tests\DatasetsLoader\DatasetsLoader.csproj", "{8A475477-C826-4878-AB1B-AFA4472F5F74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameRealisticMap.Reforger", "GameRealisticMap.Reforger\GameRealisticMap.Reforger.csproj", "{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -531,6 +533,26 @@ Global
 		{8A475477-C826-4878-AB1B-AFA4472F5F74}.Release|x64.Build.0 = Release|Any CPU
 		{8A475477-C826-4878-AB1B-AFA4472F5F74}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A475477-C826-4878-AB1B-AFA4472F5F74}.Release|x86.Build.0 = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|ARM.Build.0 = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|x64.Build.0 = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Debug|x86.Build.0 = Debug|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|ARM.ActiveCfg = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|ARM.Build.0 = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|ARM64.Build.0 = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|x64.ActiveCfg = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|x64.Build.0 = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|x86.ActiveCfg = Release|Any CPU
+		{B7A57C54-D3DA-4C79-9292-62D3581E1BAF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
