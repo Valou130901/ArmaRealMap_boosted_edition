@@ -15,15 +15,18 @@ Island Mode turns any OSM administrative boundary (canton, district, commune...)
 
 ### What it does
 
-* **Global elevation offset**: the whole terrain is shifted so that the 2nd percentile of the elevation inside the boundary lands slightly above sea level (+0.5m). The lowest real-world terrain becomes the coast.
-* **Coast profile outside the boundary**: terrain blends from the coast elevation down to a seabed profile:
-  * The blend ramp scales with the coast elevation (30m to 300m, ~12% slope max): low terrain turns into beaches right at the boundary, high terrain descends as progressive cliffs.
-  * The seabed follows a smoothstep curve reaching the **ocean floor (-50m) at 500m** from the boundary.
-  * Terrain outside the boundary is clamped so valleys and depressions cannot dig trenches along the coast.
-* **Anti-flooding**: every cell inside the boundary is kept at or above **0.2m**. The clamp is applied twice: before *and after* the road/river constraint solver, so river beds and smoothed roads can never sink land below the ocean.
+* **No terrain deformation inside the boundary**: the whole map is translated vertically so the *lowest* point of the district (0.1th percentile, to ignore bad DEM pixels) sits just above sea level (+0.5m). The real relief is preserved 1:1 — nothing inside the boundary is bent, flattened or flooded. High boundary edges simply become cliffs or long coastal slopes.
+* **Coast profile outside the boundary**: the terrain descends from the elevation of the *nearest boundary point* (propagated by a feature/distance transform, not the raw outside terrain) down to a seabed profile:
+  * The seabed follows a smoothstep curve reaching the **ocean floor (-50m) at ~500m** from the boundary.
+  * The blend ramp scales with the edge elevation (up to ~2 km for high boundaries): low boundaries become beaches, high boundaries become progressive slopes.
+  * The edge-elevation field is **smoothed** so a hilly boundary (hills/valleys alternating along the edge) no longer produces vertical walls or seams radiating from the coast.
+* **No holes**: any "ocean" area enclosed inside the island (a rasterization or geometry artifact) is turned back into land — the island can never contain trenches carved to the ocean floor.
+* **Anti-flooding**: every cell inside the boundary is kept at or above **0.2m**, enforced *after* the road/river constraint solver so river beds and smoothed roads can never sink land below the ocean.
 * **Seabed rendering**:
-  * The id map (ground textures) is forced to the *OceanGround* material outside the boundary, then the coastline strip is re-drawn on the boundary edge. OSM land-use (fields, forests...) no longer leaks onto the seabed.
-  * The satellite image is tinted with depth-based water colors outside the boundary (shallow turquoise near the coast, dark blue at depth). Swisstopo "No Data" transparent tiles are handled gracefully.
+  * Outside the boundary the id map is forced to **sand** (clean beach/seabed, no ocean-ground algae clutter); the coastline strip is re-drawn on the boundary edge. OSM land-use no longer leaks onto the seabed.
+  * The satellite image is depth-tinted water (tropical turquoise near the coast, deep lagoon offshore). Swisstopo "No Data" transparent tiles are handled gracefully.
+
+If you want real beaches where the boundary is perched high, sculpt them yourself afterwards — the automatic coast is a buffer that never touches the real inland terrain.
 
 ## Recommended settings
 

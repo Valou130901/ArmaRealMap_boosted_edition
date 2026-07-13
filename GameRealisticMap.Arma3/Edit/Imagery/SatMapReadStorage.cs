@@ -2,6 +2,7 @@
 using Pmad.HugeImages.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace GameRealisticMap.Arma3.Edit.Imagery
 {
@@ -39,7 +40,17 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
             {
                 throw new FileNotFoundException($"File '{fileName}' was not found.");
             }
-            return await Image.LoadAsync<TPixel>(stream);
+            var image = await Image.LoadAsync<TPixel>(stream);
+
+            // Single-color tiles (open sea...) are stored as tiny placeholder images by the
+            // game tools: scale them up to the expected tile size
+            var part = partitioner.GetPartFromId(partId);
+            var expectedSize = part.ImageBottomRight.X - part.ImageTopLeft.X;
+            if (image.Width != expectedSize || image.Height != expectedSize)
+            {
+                image.Mutate(i => i.Resize(expectedSize, expectedSize, KnownResamplers.NearestNeighbor));
+            }
+            return image;
         }
 
         public Task SaveImagePart<TPixel>(int partId, Image<TPixel> partImage)

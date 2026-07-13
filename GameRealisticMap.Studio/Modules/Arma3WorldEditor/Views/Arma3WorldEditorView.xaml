@@ -251,6 +251,9 @@
                         <Button Margin="5" Padding="10" cal:Message.Attach="ExportElevation">
                             <Run Text="{x:Static r:Labels.ExportToFile}" />
                         </Button>
+                        <Button Margin="5" Padding="10" cal:Message.Attach="ExportHeightmapPng">
+                            <Run Text="Export heightmap PNG (Minecraft)" />
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Expander>
@@ -275,6 +278,9 @@
                         </Button>
                         <Button Margin="5" Padding="10" cal:Message.Attach="TakeAerialImages">
                             <Run Text="{x:Static r:Labels.TakeAerialImages}"/>
+                        </Button>
+                        <Button Margin="5" Padding="10" cal:Message.Attach="ClearAllObjects" IsEnabled="{Binding CanClearAllObjects}">
+                            <Run Text="Supprimer tous les objets"/>
                         </Button>
                     </StackPanel>
 

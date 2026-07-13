@@ -70,15 +70,24 @@
                             </Style>
                         </DataGridComboBoxColumn.ElementStyle>
                     </DataGridComboBoxColumn>
-                    <DataGridTextColumn Header="{x:Static r:Labels.RemovalRate}" Binding="{Binding Factor}" Width="100" />
-                    <DataGridTextColumn Header="{x:Static r:Labels.InitialCount}" Binding="{Binding Count, Mode=OneWay}" IsReadOnly="True" Width="100" />
-                    <DataGridTextColumn Header="{x:Static r:Labels.EstimatedRemainCount}" Binding="{Binding TargetCount, Mode=OneWay}" IsReadOnly="True" Width="175" />
+                    <DataGridCheckBoxColumn Header="Par type (motif)" Binding="{Binding IsPattern, UpdateSourceTrigger=PropertyChanged}" Width="90" />
+                    <DataGridTextColumn Header="{x:Static r:Labels.RemovalRate}" Binding="{Binding Factor}" Width="80" />
+                    <DataGridTextColumn Header="{x:Static r:Labels.InitialCount}" Binding="{Binding Count, Mode=OneWay}" IsReadOnly="True" Width="90" />
+                    <DataGridTextColumn Header="{x:Static r:Labels.EstimatedRemainCount}" Binding="{Binding TargetCount, Mode=OneWay}" IsReadOnly="True" Width="150" />
                 </DataGrid.Columns>
             </DataGrid>
 
             <Rectangle Grid.Row="1" Height="1" Fill="{x:Static SystemColors.ActiveBorderBrush}"
                        VerticalAlignment="Bottom"/>
         </Grid>
+
+        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0 12 0 0">
+            <TextBlock VerticalAlignment="Center" Margin="0 0 8 0" Text="Ajout rapide par type:" />
+            <Button Padding="10 4" Margin="2 0" cal:Message.Attach="AddPreset('tree')"><Run Text="Arbres" /></Button>
+            <Button Padding="10 4" Margin="2 0" cal:Message.Attach="AddPreset('bush')"><Run Text="Buissons" /></Button>
+            <Button Padding="10 4" Margin="2 0" cal:Message.Attach="AddPreset('clutter')"><Run Text="Herbe/clutter" /></Button>
+            <Button Padding="10 4" Margin="2 0" cal:Message.Attach="AddPreset('rock')"><Run Text="Rochers" /></Button>
+        </StackPanel>
 
         <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0 12 0 0" HorizontalAlignment="Right"
               IsSharedSizeScope="True">

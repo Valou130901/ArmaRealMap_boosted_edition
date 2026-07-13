@@ -7,9 +7,10 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
 {
     public static class IdMapHelper
     {
-        internal static readonly Regex NormalMatch = new Regex(@"texture=""([^""]*)"";\r?\n\ttexGen=1;", RegexOptions.CultureInvariant);
+        // Indentation is tab in GRM generated rvmat, spaces in rvmat un-binarized from game files
+        internal static readonly Regex NormalMatch = new Regex(@"texture=""([^""]*)"";\r?\n[ \t]*texGen=1;", RegexOptions.CultureInvariant);
 
-        internal static readonly Regex TextureMatch = new Regex(@"texture=""([^""]*)"";\r?\n\ttexGen=2;", RegexOptions.CultureInvariant);
+        internal static readonly Regex TextureMatch = new Regex(@"texture=""([^""]*)"";\r?\n[ \t]*texGen=2;", RegexOptions.CultureInvariant);
 
         public static Task<List<GroundDetailTexture>> GetUsedTextureList(EditableWrp wrp, IGameFileSystem projectDrive)
         {

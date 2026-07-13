@@ -1,0 +1,100 @@
+<Window x:Class="GameRealisticMap.Studio.Modules.Arma3WorldEditor.Views.Import.GameMapImporterView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:cal="http://www.caliburnproject.org"
+    xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:geminibehaviors="clr-namespace:Gemini.Framework.Behaviors;assembly=Gemini"
+    xmlns:r="clr-namespace:GameRealisticMap.Studio"
+    Background="{DynamicResource EnvironmentWindowBackground}"
+    Foreground="{DynamicResource EnvironmentWindowText}"
+    Width="650" Height="550" MinWidth="500" MinHeight="350"
+    WindowStartupLocation="CenterOwner"
+    ShowInTaskbar="False"
+    Title="Import a map from game or mods">
+    <behaviors:Interaction.Behaviors>
+        <geminibehaviors:WindowOptionsBehavior ShowIcon="False"
+                                               ShowMinimizeBox="False"
+                                               ShowMaximizeBox="False" />
+    </behaviors:Interaction.Behaviors>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock FontSize="20" Margin="0 0 0 5" Text="Import a map from game or mods" />
+            <TextBlock TextWrapping="Wrap" Margin="0 0 0 10"
+                       Text="The map file (wrp), its config and its imagery layers will be extracted to the project drive, then opened in the world editor. Map sources already unpacked on the project drive (P:) are also listed and imported in place. Note: the binarized road network of official maps cannot be edited." />
+            <Grid Margin="0 0 0 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="250" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Custom PBO prefix" />
+                <TextBox Grid.Row="0" Grid.Column="1" Margin="10 2" Padding="3" Text="{Binding NewPboPrefix, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource EnvironmentToolWindowDisabledText}"
+                           Text="Leave empty to keep the original prefix (the mod will override the original map)" />
+                <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Custom world name" />
+                <TextBox Grid.Row="1" Grid.Column="1" Margin="10 2" Padding="3" Text="{Binding NewWorldName, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource EnvironmentToolWindowDisabledText}"
+                           Text="Leave empty to keep the original name (e.g. malden_custom)" />
+            </Grid>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Items}"
+                  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Map" Binding="{Binding WorldName}" Width="160" />
+                <DataGridTextColumn Header="PBO" Binding="{Binding PboPrefix}" Width="*" />
+                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="80" />
+                <DataGridTextColumn Header="MB" Binding="{Binding SizeMB, StringFormat={}{0:0.0}}" Width="70" />
+                <DataGridTemplateColumn Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Padding="8 2" Margin="2"
+                                    cal:Message.Attach="ImportItem($dataContext)">
+                                <Run Text="Import" />
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Grid.Row="2" Margin="0 8 0 0" Text="{Binding Status}" Foreground="{DynamicResource EnvironmentToolWindowDisabledText}" />
+
+        <Grid Grid.Row="3" Margin="0 12 0 0" HorizontalAlignment="Right" IsSharedSizeScope="True">
+            <Grid.Resources>
+                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                    <Setter Property="Margin" Value="12 0 0 0" />
+                    <Setter Property="Padding" Value="4" />
+                    <Setter Property="MinWidth" Value="100" />
+                </Style>
+            </Grid.Resources>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition SharedSizeGroup="WindowButtons" />
+                <ColumnDefinition SharedSizeGroup="WindowButtons" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" IsDefault="True" cal:Message.Attach="Import" IsEnabled="{Binding CanImport}">
+                <Run Text="Import" />
+            </Button>
+            <Button Grid.Column="1" IsCancel="True" cal:Message.Attach="Cancel">
+                <Run Text="{x:Static r:Labels.Cancel}" />
+            </Button>
+        </Grid>
+    </Grid>
+</Window>

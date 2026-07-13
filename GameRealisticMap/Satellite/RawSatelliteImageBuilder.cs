@@ -106,8 +106,10 @@ namespace GameRealisticMap.Satellite
                     m.GaussianBlur(2f); // Smooth the edge
                 });
 
-                var oceanColor = new Rgba32(10, 28, 48); // Dark blue ocean water
-                var shallowColor = new Rgba32(30, 80, 120); // Lighter blue for shallow water
+                var oceanColor = new Rgba32(20, 105, 125); // Tropical deep water: lagoon teal instead of dark navy
+                var shallowColor = new Rgba32(70, 185, 175); // Bright turquoise for shallow water
+                var sandColor = new Rgba32(206, 188, 150); // Beach sand for the coastal buffer
+                var grassColor = new Rgba32(75, 95, 55); // Default land color for outside the island
 
                 Parallel.For(0, part.RealRectangle.Height, y =>
                 {
@@ -122,9 +124,29 @@ namespace GameRealisticMap.Satellite
                         var elevation = elevationData.Elevation.ElevationAt(new TerrainPoint(terrainX, terrainY));
 
                         var orig = img[x, y];
-                        
-                        Rgba32 fakeColor = new Rgba32(75, 95, 55, 255); // Default land color for outside the island
-                        
+
+                        // Outside the island: sandy beach near the waterline, fading to generic
+                        // land color higher up the coastal buffer
+                        Rgba32 fakeColor;
+                        if (elevation <= 3f)
+                        {
+                            fakeColor = new Rgba32(sandColor.R, sandColor.G, sandColor.B, 255);
+                        }
+                        else if (elevation < 15f)
+                        {
+                            float g = (elevation - 3f) / 12f;
+                            fakeColor = new Rgba32(
+                                (byte)(sandColor.R * (1 - g) + grassColor.R * g),
+                                (byte)(sandColor.G * (1 - g) + grassColor.G * g),
+                                (byte)(sandColor.B * (1 - g) + grassColor.B * g),
+                                255
+                            );
+                        }
+                        else
+                        {
+                            fakeColor = new Rgba32(grassColor.R, grassColor.G, grassColor.B, 255);
+                        }
+
                         if (elevation < 0.5f)
                         {
                             float depth = -elevation;

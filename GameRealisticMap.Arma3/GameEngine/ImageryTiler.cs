@@ -37,7 +37,7 @@ namespace GameRealisticMap.Arma3.GameEngine
 
         }
 
-        public ImageryTiler(int tileSize, double resolution, float sizeInMeters, int idMapMultiplier = 1)
+        public ImageryTiler(int tileSize, double resolution, float sizeInMeters, int idMapMultiplier = 1, int? tileOverlap = null)
         {
             TileSize = tileSize;
             FullImageSize = new Size((int)Math.Ceiling(sizeInMeters / resolution));
@@ -49,17 +49,27 @@ namespace GameRealisticMap.Arma3.GameEngine
                 throw new ArgumentException($"Id map tile would be too big: {idMapMultiplier} * {tileSize} => {idMapMultiplier * tileSize}");
             }
 
-            // https://github.com/pennyworth12345/A3_MMSI/wiki/Mapframe-Information
+            if (tileOverlap != null)
+            {
+                // Actual value measured on an existing map (from the rvmat uv transforms):
+                // computing it is not reliable, maps are not always generated with the same
+                // land grid convention
+                TileOverlap = tileOverlap.Value;
+            }
+            else
+            {
+                // https://github.com/pennyworth12345/A3_MMSI/wiki/Mapframe-Information
 
-            // Real tile overlap computation
-            var textureLayerSize = (double)sizeInMeters / WrpCompiler.LandRange(sizeInMeters);
-            var startTileSizePixels = tileSize - 16; // 16 px is the desired overlap
-            var startTileSizeMeters = Resolution * startTileSizePixels;
-            var landgridCellCount = startTileSizeMeters / textureLayerSize;
-            landgridCellCount -= landgridCellCount % 4;
-            var tileSizeMeters = landgridCellCount * textureLayerSize;
-            var tileSizePixels = tileSizeMeters / Resolution;
-            TileOverlap = (int)(tileSize - tileSizePixels);
+                // Real tile overlap computation
+                var textureLayerSize = (double)sizeInMeters / WrpCompiler.LandRange(sizeInMeters);
+                var startTileSizePixels = tileSize - 16; // 16 px is the desired overlap
+                var startTileSizeMeters = Resolution * startTileSizePixels;
+                var landgridCellCount = startTileSizeMeters / textureLayerSize;
+                landgridCellCount -= landgridCellCount % 4;
+                var tileSizeMeters = landgridCellCount * textureLayerSize;
+                var tileSizePixels = tileSizeMeters / Resolution;
+                TileOverlap = (int)(tileSize - tileSizePixels);
+            }
 
             var halfOverlap = TileOverlap / 2;
             var step = tileSize - TileOverlap;

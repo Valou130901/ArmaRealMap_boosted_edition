@@ -4,6 +4,7 @@ using GameRealisticMap.Arma3.IO;
 using Pmad.HugeImages.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace GameRealisticMap.Arma3.Edit.Imagery
 {
@@ -13,12 +14,14 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
         private readonly IGameFileSystem fileSystem;
         private readonly string path;
         private readonly Dictionary<string, TerrainMaterial> materials;
+        private readonly int idMapMultiplier;
 
         public IdMapReadStorage(IImageryPartitioner partitioner, IGameFileSystem fileSystem, string path, TerrainMaterialLibrary library, IArma3MapConfig config)
         {
             this.partitioner = partitioner;
             this.fileSystem = fileSystem;
             this.path = path;
+            idMapMultiplier = config.IdMapMultiplier;
             materials = library.Definitions.Select(d => d.Material).ToDictionary(m => m.GetColorTexturePath(config), m => m, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -33,6 +36,11 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
             var part = partitioner.GetPartFromId(partId);
 
             var textures = (await GetTexturesFromRvMat(part)).Select(t => t.Id).ToList();
+            while (textures.Count < 6)
+            {
+                // Game map tiles can use less than 6 textures: pad to keep mask decoding safe
+                textures.Add(textures[textures.Count - 1]);
+            }
 
             var imageFileName = $"{path}\\data\\layers\\M_{part.X:000}_{part.Y:000}_lca.png";
             using var streamImage = fileSystem.OpenFileIfExists(imageFileName);
@@ -41,6 +49,20 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
                 throw new FileNotFoundException($"File '{imageFileName}' was not found.");
             }
             var maskImage = await Image.LoadAsync<Rgba32>(streamImage);
+
+            // Old game maps use tiny solid-color placeholder masks for single-texture tiles:
+            // scale to the expected tile size (nearest neighbor, mask colors are discrete)
+            var expectedSize = part.Size * idMapMultiplier;
+            if (maskImage.Width != expectedSize || maskImage.Height != expectedSize)
+            {
+                maskImage.Mutate(m => m.Resize(new ResizeOptions
+                {
+                    Size = new Size(expectedSize, expectedSize),
+                    Sampler = KnownResamplers.NearestNeighbor,
+                    Mode = ResizeMode.Stretch
+                }));
+            }
+
             var finalImage = new Image<TPixel>(maskImage.Width, maskImage.Height);
             var px = new TPixel();
             for (int x = 0; x < maskImage.Width; ++x)
@@ -65,13 +87,33 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
             var rvmatContent = await new StreamReader(streamRvmat).ReadToEndAsync();
             var matches = IdMapHelper.TextureMatch.Matches(rvmatContent);
             var textures = matches.Select(m => m.Groups[1].Value)
-                .Select(tex => materials[tex])
+                .Select(GetMaterial)
                 .ToList();
             if (textures.Count == 0)
             {
                 throw new ApplicationException($"'{rvmatFileName}' is invalid or corrupted.");
             }
             return textures;
+        }
+
+        private TerrainMaterial GetMaterial(string texture)
+        {
+            lock (materials)
+            {
+                if (!materials.TryGetValue(texture, out var material))
+                {
+                    // Texture unknown to the material library (happens with imported game maps):
+                    // generate a stable ad-hoc material so the id map can still be reconstructed
+                    var hash = 17;
+                    foreach (var c in texture.ToLowerInvariant())
+                    {
+                        hash = hash * 31 + c;
+                    }
+                    material = new TerrainMaterial(texture, texture, new Rgb24((byte)(hash >> 16), (byte)(hash >> 8), (byte)hash), null);
+                    materials.Add(texture, material);
+                }
+                return material;
+            }
         }
 
         internal static Rgb24 GetColor(Rgba32 rgba32, List<Rgb24> textures)

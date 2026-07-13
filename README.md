@@ -6,7 +6,7 @@ This fork is a heavily upgraded version of Game Realistic Map, specifically tail
 
 **Download: see [Releases](https://github.com/Valou130901/ArmaRealMap_boosted_edition/releases) — unzip and run `GameRealisticMap.Studio.exe` (.NET 8 Desktop Runtime required).**
 
-Full guide for the fork-exclusive features: [docs/boosted-edition.md](docs/boosted-edition.md)
+📖 **[Complete user guide](docs/user-guide.md)** — full walkthrough of every feature. Island mode internals & performance tuning: [docs/boosted-edition.md](docs/boosted-edition.md).
 
 ## 🚀 Boosted Edition Exclusive Features
 
@@ -30,8 +30,20 @@ The built-in mod packaging tool (Options → Arma 3 → uncheck *Use PboProject*
 * No dependency on Mikero's tools, and immune to the MakePbo lake-on-map-edge crash.
 
 ### 🗺️ Enhanced SatMap & IdMap Workflow
-* **SatMap Reconstruction**: You can now regenerate and export a corrected satellite map (`satmap_corrected.png`) directly from your edited `IdMap` and ground textures via a dedicated button in the World Editor.
-* **Improved UI & Nominatim Search**: Upgraded the Nominatim search interface to display full boundary names instead of raw IDs, making map area selection much more intuitive. Selecting an island boundary automatically centers the map and sizes it to fit (+20% margin).
+* **SatMap Reconstruction**: Regenerate a corrected satellite map (`satmap_corrected.png`) from your edited `IdMap` via a dedicated button. It fills each surface with its **real in-game ground texture** (grass, asphalt, sand…) then Gaussian-blurs the result, matching the soft look of a natively generated GRM satmap — ideal after painting new roads or water.
+* **Improved UI & Nominatim Search**: The Nominatim search shows full boundary names instead of raw IDs. Selecting an island boundary auto-centers the map and sizes it to fit (+20% margin).
+
+### 📥 Import Existing Maps (game & mods)
+Import any Arma 3 map (official or from a mod) to edit it: **Fichier → Import a map from game or mods**.
+* Scans the game, active mods and the whole Workshop; **junk entries from protected/obfuscated PBOs are filtered out**.
+* Extracts the wrp (binarized OPRW supported), config, roads and **imagery layers wherever they live** — `.paa` tiles are decoded to PNG, binarized rvmat converted back to text, so satmap & id map become editable.
+* Optional **custom PBO prefix / world name** to build your own independent version instead of overriding the original map.
+
+### 🌲 Reduce Objects by Type
+The **Réduire** tool can now thin out a whole category at once — tick *"Par type (motif)"* or use the quick buttons **Arbres / Buissons / Herbe / Rochers**. One rule reduces every matching model (e.g. remove half of all trees) instead of one model at a time. A **"Supprimer tous les objets"** button clears the map to start from scratch.
+
+### ⛏️ Minecraft / WorldPainter Export
+Export the elevation grid as a **16-bit grayscale heightmap PNG** (+ a readme documenting altitudes, sea level and scale) ready to import in WorldPainter for a 1:1 Minecraft world.
 
 ### 📦 Upgraded Engine Dependencies
 Integrated an upgraded `bis-file-formats` library bringing:

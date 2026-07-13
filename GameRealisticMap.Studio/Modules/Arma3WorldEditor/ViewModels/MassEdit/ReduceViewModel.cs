@@ -42,6 +42,11 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.MassEdit
             return Task.CompletedTask;
         }
 
+        public void AddPreset(string pattern)
+        {
+            ReduceItems.Add(new ReduceItem { IsPattern = true, Source = pattern, Factor = 0.5 });
+        }
+
         public Arma3WorldEditorViewModel ParentEditor => worldEditor;
 
         public ObservableCollection<ReduceItem> ReduceItems { get; } = new ObservableCollection<ReduceItem>();

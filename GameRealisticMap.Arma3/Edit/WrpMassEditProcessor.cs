@@ -116,7 +116,7 @@ namespace GameRealisticMap.Arma3.Edit
             {
                 var obj = objects[i];
                 if (obj != null &&
-                    string.Equals(obj.Model, operation.Model, StringComparison.OrdinalIgnoreCase) &&
+                    Matches(obj.Model, operation) &&
                     (operation.RemoveRatio == 1 || rnd.NextDouble() <= operation.RemoveRatio))
                 {
                     objects[i] = null;
@@ -125,6 +125,19 @@ namespace GameRealisticMap.Arma3.Edit
             }
             Console.WriteLine($"Reduce '{operation.Model}' -> {changes} removed");
             return changes;
+        }
+
+        private static bool Matches(string? model, WrpMassReduce operation)
+        {
+            if (string.IsNullOrEmpty(model))
+            {
+                return false;
+            }
+            if (operation.IsPattern)
+            {
+                return model.Contains(operation.Model, StringComparison.OrdinalIgnoreCase);
+            }
+            return string.Equals(model, operation.Model, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

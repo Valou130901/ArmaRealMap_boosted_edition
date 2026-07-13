@@ -109,14 +109,17 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
 
                 Materials = await MaterialItem.Create(this, World, arma3Data.ProjectDrive, ConfigFile.PboPrefix);
             }
-            else if (World != null)
+            if (Imagery == null && World != null)
             {
-                var pboPrefix = World.MatNames.FirstOrDefault(m => m.Contains("data\\layers\\p_", StringComparison.OrdinalIgnoreCase));
+                // Fallback: locate the layers from the material paths of the world itself.
+                // Handles imported maps and maps whose layers live in a separate PBO prefix.
+                // MatNames can contain null entries (binarized game maps)
+                var pboPrefix = World.MatNames.FirstOrDefault(m => !string.IsNullOrEmpty(m) && m.Contains("data\\layers\\p_", StringComparison.OrdinalIgnoreCase));
                 if (pboPrefix != null)
                 {
                     var index = pboPrefix.IndexOf("data\\layers\\p_", StringComparison.OrdinalIgnoreCase);
                     pboPrefix = pboPrefix.Substring(0, index).TrimEnd('\\');
-                    
+
                     Imagery = ExistingImageryInfos.TryCreate(arma3Data.ProjectDrive, pboPrefix, SizeInMeters!.Value);
                     Materials = await MaterialItem.Create(this, World, arma3Data.ProjectDrive, pboPrefix);
                 }
@@ -195,6 +198,7 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
             }
             NotifyOfPropertyChange(nameof(ObjectStatsItems));
             NotifyOfPropertyChange(nameof(ObjectStatsText));
+            NotifyOfPropertyChange(nameof(CanClearAllObjects));
         }
 
         public string ObjectStatsText => string.Format("{0:N0} objects, {1:N0} distinct models", _world?.ObjectsCount ?? 0, objectStatsItems.Count);
@@ -439,6 +443,33 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                 return windowManager.ShowDialogAsync(new FileImporterViewModel(this, dialog.FileName));
             }
             return Task.CompletedTask;
+        }
+
+        public bool CanClearAllObjects => _world != null && _world.ObjectsCount > 1;
+
+        public void ClearAllObjects()
+        {
+            if (_world == null)
+            {
+                return;
+            }
+            var count = _world.GetNonDummyObjects().Count();
+            if (count == 0)
+            {
+                return;
+            }
+            if (System.Windows.MessageBox.Show(
+                    $"Remove all {count:N0} objects from the map? This cannot be undone.",
+                    "Clear all objects",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning) != System.Windows.MessageBoxResult.Yes)
+            {
+                return;
+            }
+            // Keep only the dummy sentinel that marks the end of the object list
+            _world.Objects = new List<EditableWrpObject> { EditableWrpObject.Dummy };
+            mapEditor?.InvalidateObjects(true);
+            PostEdit();
         }
 
         internal void Apply(WrpEditBatch batch)
@@ -720,10 +751,15 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                     var satMapFile = dialog.FileName;
                     var materials = await IoC.Get<GdtBrowserViewModel>().ToTerrainMaterialLibrary();
 
+                    // Paint with the real game ground textures: pass the game file system and the
+                    // idmap resolution so the tiling matches the surface scale
+                    var gameFileSystem = arma3Data.ProjectDrive;
+                    var idmapMetersPerPixel = _imagery.Resolution / Math.Max(1, _imagery.IdMapMultiplier);
+
                     _ = IoC.Get<IProgressTool>()
                             .RunTask("Generate SatMap from ID Map", async ui => {
                                 var step = ui.Scope.CreateInteger("Generate", 100);
-                                await Task.Run(() => SatMapFromIdMapGenerator.Generate(idMapFile, satMapFile, materials, new Progress<double>(p => step.Report((int)(p * 100)))));
+                                await Task.Run(() => SatMapFromIdMapGenerator.Generate(idMapFile, satMapFile, materials, new Progress<double>(p => step.Report((int)(p * 100))), gameFileSystem, idmapMetersPerPixel));
                                 
                                 ui.AddSuccessAction(() => ShellHelper.OpenUri(satMapFile), GameRealisticMap.Studio.Labels.OpenImage);
                                 ui.AddSuccessAction(() => ShellHelper.OpenUri(Path.GetDirectoryName(satMapFile)!), GameRealisticMap.Studio.Labels.OpenFolder);
@@ -783,6 +819,21 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                 if (dialog.ShowDialog() == true)
                 {
                     ProgressToolHelper.Start(new ExportElevationTask(_world, dialog.FileName));
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task ExportHeightmapPng()
+        {
+            if (_world != null)
+            {
+                var dialog = new SaveFileDialog();
+                dialog.Filter = "16-bit grayscale PNG|*.png";
+                dialog.FileName = Path.GetFileNameWithoutExtension(FileName) + "-heightmap.png";
+                if (dialog.ShowDialog() == true)
+                {
+                    ProgressToolHelper.Start(new ExportHeightmapPngTask(_world, dialog.FileName));
                 }
             }
             return Task.CompletedTask;

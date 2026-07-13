@@ -11,14 +11,21 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
 {
     public class ExistingImageryInfos : IArma3MapConfig
     {
-        public ExistingImageryInfos(int tileSize, double resolution, float sizeInMeters, string proPrefix, int idMapMultiplier = 1)
+        public ExistingImageryInfos(int tileSize, double resolution, float sizeInMeters, string proPrefix, int idMapMultiplier = 1, int? tileOverlap = null)
         {
             TileSize = tileSize;
             Resolution = resolution;
             SizeInMeters = sizeInMeters;
             PboPrefix = proPrefix;
             IdMapMultiplier = idMapMultiplier;
+            TileOverlap = tileOverlap;
         }
+
+        /// <summary>
+        /// Actual tile overlap measured on the map files (existing maps are not always generated
+        /// with the same land grid convention, so it cannot be reliably computed)
+        /// </summary>
+        public int? TileOverlap { get; }
 
         public int TileSize { get; }
 
@@ -48,7 +55,8 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
                 return null;
             }
 
-            var firstUA = new Regex("aside\\[\\]={([0-9\\.]+),", RegexOptions.CultureInvariant).Match(File.ReadAllText(rvmat));
+            var rvmatContent = File.ReadAllText(rvmat);
+            var firstUA = new Regex("aside\\[\\]={([0-9\\.]+),", RegexOptions.CultureInvariant).Match(rvmatContent);
             if (!firstUA.Success)
             {
                 return null;
@@ -58,10 +66,34 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
             var satMapTileSize = Image.Identify(satmap00).Width;
             var satMapResolution = 1d / (ua * satMapTileSize);
 
+            // Old game maps can use tiny placeholder mask tiles (solid color for single-texture
+            // tiles): never let the multiplier fall to zero
             var idMapTileSize = Image.Identify(idmap00).Width;
-            var idMapMultiplier = idMapTileSize / satMapTileSize;
+            var idMapMultiplier = Math.Max(1, idMapTileSize / satMapTileSize);
 
-            return new ExistingImageryInfos(satMapTileSize, satMapResolution, sizeInMeters, pboPrefix, idMapMultiplier);
+            // Measure the actual tile overlap from the uv transforms of two adjacent tiles:
+            // it cannot be reliably computed, maps are not always generated with the same
+            // land grid convention
+            int? tileOverlap = null;
+            var rvmat10 = projectDrive.GetFullPath($"{pboPrefix}\\data\\layers\\P_{1:000}-{0:000}.rvmat");
+            if (File.Exists(rvmat10))
+            {
+                var posRegex = new Regex(@"pos\[\]={(-?[0-9\.]+),", RegexOptions.CultureInvariant);
+                var pos00 = posRegex.Match(rvmatContent);
+                var pos10 = posRegex.Match(File.ReadAllText(rvmat10));
+                if (pos00.Success && pos10.Success)
+                {
+                    var x0 = double.Parse(pos00.Groups[1].Value, CultureInfo.InvariantCulture);
+                    var x1 = double.Parse(pos10.Groups[1].Value, CultureInfo.InvariantCulture);
+                    var stepPixels = (x0 - x1) / ua / satMapResolution;
+                    if (stepPixels > 0 && stepPixels <= satMapTileSize)
+                    {
+                        tileOverlap = satMapTileSize - (int)Math.Round(stepPixels);
+                    }
+                }
+            }
+
+            return new ExistingImageryInfos(satMapTileSize, satMapResolution, sizeInMeters, pboPrefix, idMapMultiplier, tileOverlap);
         }
 
         public HugeImage<Rgb24> GetIdMap(IGameFileSystem fileSystem, TerrainMaterialLibrary materials)
@@ -72,7 +104,7 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
 
         internal ImageryTiler CreateTiler()
         {
-            return new ImageryTiler(TileSize, Resolution, SizeInMeters, IdMapMultiplier);
+            return new ImageryTiler(TileSize, Resolution, SizeInMeters, IdMapMultiplier, TileOverlap);
         }
 
         public HugeImage<Rgb24> GetSatMap(IGameFileSystem fileSystem)

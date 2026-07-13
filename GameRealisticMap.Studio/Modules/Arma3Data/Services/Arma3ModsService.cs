@@ -42,20 +42,28 @@ namespace GameRealisticMap.Studio.Modules.Arma3Data.Services
 
         public List<ModInfo> GetModsList()
         {
+            var cdlc = CreatorDlc.Where(d => Directory.Exists(d.Path));
+
+            var mods = new List<ModInfo>();
+
             var wk = Arma3ToolsHelper.GetArma3WorkshopPath();
             if (!string.IsNullOrEmpty(wk))
             {
-                var cdlc = CreatorDlc.Where(d => Directory.Exists(d.Path));
-
-                var mods = Directory.GetDirectories(wk)
+                mods.AddRange(Directory.GetDirectories(wk)
                     .Where(d => Directory.Exists(Path.Combine(d, "addons")))
-                    .Select(d => new ModInfo(GetModName(d), Path.Combine(d, "addons"), Path.GetFileName(d)))
-                    .ToList()
-                    .OrderBy(d => d.Name);
-
-                return cdlc.Concat(mods).ToList();
+                    .Select(d => new ModInfo(GetModName(d), Path.Combine(d, "addons"), Path.GetFileName(d))));
             }
-            return new List<ModInfo>();
+
+            // Local mods: "@" prefixed folders in the game directory
+            var a3 = Arma3ToolsHelper.GetArma3Path();
+            if (!string.IsNullOrEmpty(a3) && Directory.Exists(a3))
+            {
+                mods.AddRange(Directory.GetDirectories(a3, "@*")
+                    .Where(d => Directory.Exists(Path.Combine(d, "addons")))
+                    .Select(d => new ModInfo(GetModName(d) + " (local)", Path.Combine(d, "addons"))));
+            }
+
+            return cdlc.Concat(mods.OrderBy(d => d.Name)).ToList();
         }
 
         private string GetModName(string path)
