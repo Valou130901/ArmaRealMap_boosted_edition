@@ -1,6 +1,6 @@
 # Boosted Edition — User Guide
 
-This page documents the features exclusive to the Boosted Edition fork and the recommended settings to get the best results in the shortest time.
+This page documents the features exclusive to the Boosted Edition fork and the recommended settings to get the best results in the shortest time. *(Français : [boosted-edition.fr.md](boosted-edition.fr.md).)*
 
 ## Island Mode
 

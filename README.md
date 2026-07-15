@@ -8,6 +8,8 @@ This fork is a heavily upgraded version of Game Realistic Map, specifically tail
 
 📖 **[Complete user guide](docs/user-guide.md)** — full walkthrough of every feature. Island mode internals & performance tuning: [docs/boosted-edition.md](docs/boosted-edition.md).
 
+🇫🇷 **[Guide utilisateur complet (français)](docs/user-guide.fr.md)** — et le [guide Boosted Edition](docs/boosted-edition.fr.md).
+
 ## 🚀 Boosted Edition Exclusive Features
 
 ### ⚡ Maximum Performance (100% CPU Utilization)

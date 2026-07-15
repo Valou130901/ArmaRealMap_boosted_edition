@@ -1,6 +1,6 @@
 # Game Realistic Map — Boosted Edition — User Guide
 
-Complete guide for the Boosted Edition fork. For the quick feature list see the [README](../README.md); for the internals of island mode and performance tuning see [boosted-edition.md](boosted-edition.md).
+Complete guide for the Boosted Edition fork. For the quick feature list see the [README](../README.md); for the internals of island mode and performance tuning see [boosted-edition.md](boosted-edition.md). *(Français : [user-guide.fr.md](user-guide.fr.md).)*
 
 ## Table of contents
 
