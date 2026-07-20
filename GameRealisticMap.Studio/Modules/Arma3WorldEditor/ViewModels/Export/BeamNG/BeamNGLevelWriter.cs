@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -62,6 +62,10 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
         private const int MaxForestInstancesPerType = 500_000;
         private const int MaxDecalRoadNodes = 150;
         private const float MinRoadNodeSpacing = 4f;
+        private const float RoadWidthFactor = 1.3f;
+        // Light smoothing of the elevation grid: removes the faceted look of the terrain mesh
+        // without flattening the real relief
+        private const float TerrainSmoothing = 0.55f;
 
         // Terrain layers: physics (groundmodel) varies per painted surface, visuals stay the satellite image
         private static readonly (string Name, string GroundModel)[] TerrainLayers =
@@ -98,6 +102,85 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             this.presetLayerMap = presetLayerMap;
         }
 
+        private float[]? smoothedHeights;
+        private int smoothedSize;
+
+        /// <summary>
+        /// Blend the elevation grid with a 3x3 average. At 2-4 m per cell the raw grid renders as
+        /// visible triangular facets; a light blend keeps the real relief but softens the mesh.
+        /// Used for the terrain and for object placement alike, so nothing floats or sinks.
+        /// </summary>
+        private void BuildSmoothedHeights(int size)
+        {
+            smoothedSize = size;
+            var source = new float[size * size];
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    source[y * size + x] = grid[x, y];
+                }
+            }
+            var result = new float[size * size];
+            Parallel.For(0, size, y =>
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var sum = 0f;
+                    var count = 0;
+                    for (var dy = -1; dy <= 1; dy++)
+                    {
+                        var sy = y + dy;
+                        if (sy < 0 || sy >= size) continue;
+                        for (var dx = -1; dx <= 1; dx++)
+                        {
+                            var sx = x + dx;
+                            if (sx < 0 || sx >= size) continue;
+                            sum += source[sy * size + sx];
+                            count++;
+                        }
+                    }
+                    var average = sum / count;
+                    var original = source[y * size + x];
+                    result[y * size + x] = original + (average - original) * TerrainSmoothing;
+                }
+            });
+            smoothedHeights = result;
+        }
+
+        private float Height(int x, int y)
+        {
+            if (smoothedHeights == null)
+            {
+                return grid[x, y];
+            }
+            return smoothedHeights[Math.Clamp(y, 0, smoothedSize - 1) * smoothedSize + Math.Clamp(x, 0, smoothedSize - 1)];
+        }
+
+        /// <summary>
+        /// Bilinear sample of the smoothed elevation, in terrain meters.
+        /// </summary>
+        private float ElevationAt(float terrainX, float terrainY)
+        {
+            if (smoothedHeights == null)
+            {
+                return grid.ElevationAt(new TerrainPoint(terrainX, terrainY));
+            }
+            var gx = terrainX / cellSize;
+            var gy = terrainY / cellSize;
+            var x0 = (int)MathF.Floor(gx);
+            var y0 = (int)MathF.Floor(gy);
+            var tx = gx - x0;
+            var ty = gy - y0;
+            var h00 = Height(x0, y0);
+            var h10 = Height(x0 + 1, y0);
+            var h01 = Height(x0, y0 + 1);
+            var h11 = Height(x0 + 1, y0 + 1);
+            var top = h00 + (h10 - h00) * tx;
+            var bottom = h01 + (h11 - h01) * tx;
+            return top + (bottom - top) * ty;
+        }
+
         private static string Sanitize(string name)
         {
             var chars = name.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray();
@@ -112,13 +195,18 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
                 throw new ApplicationException($"BeamNG terrains must be a power-of-two size up to 8192 (map grid is {size}).");
             }
 
+            using (scope.CreateSingle("Smoothing elevation"))
+            {
+                BuildSmoothedHeights(size);
+            }
+
             var min = float.MaxValue;
             var max = float.MinValue;
             for (var x = 0; x < size; x++)
             {
                 for (var y = 0; y < size; y++)
                 {
-                    var v = grid[x, y];
+                    var v = Height(x, y);
                     if (v < min) min = v;
                     if (v > max) max = v;
                 }
@@ -277,44 +365,51 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
                     ["macroTexSize"] = new[] { 1024, 1024 },
                 };
                 var templates = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, JsonElement>>>(LoadTerrainMaterialsJson())!;
-                var mapping = new (string Layer, string Template, string? GroundModel)[]
+                // Layer -> (proven material template, ground model, detail colour, noise, tile size in meters)
+                var mapping = new (string Layer, string Template, string GroundModel, Rgb24 Color, int Noise, int TileMeters)[]
                 {
-                    ("grm_grass", "Grass", null),
-                    ("grm_asphalt", "asphalt", null),
-                    ("grm_dirt", "Dirt", null),
-                    ("grm_gravel", "GRAVEL", null),
-                    ("grm_sand", "BeachSand", null),
-                    ("grm_rock", "ROCK", null),
-                    ("grm_mud", "Dirt", "MUD"),
+                    ("grm_grass", "Grass", "GRASS", new Rgb24(96, 112, 62), 26, 3),
+                    ("grm_asphalt", "asphalt", "ASPHALT", new Rgb24(64, 64, 68), 12, 4),
+                    ("grm_dirt", "Dirt", "DIRT", new Rgb24(118, 95, 68), 24, 3),
+                    ("grm_gravel", "GRAVEL", "GRAVEL", new Rgb24(132, 126, 116), 34, 2),
+                    ("grm_sand", "BeachSand", "SAND", new Rgb24(196, 180, 148), 16, 3),
+                    ("grm_rock", "ROCK", "ROCK", new Rgb24(124, 120, 114), 30, 4),
+                    ("grm_mud", "Dirt", "MUD", new Rgb24(82, 68, 52), 20, 3),
                 };
-                foreach (var (layer, templateName, groundModel) in mapping)
+                foreach (var (layer, templateName, groundModel, color, noise, tileMeters) in mapping)
                 {
+                    // Keep the proven field set of the official template, but repoint every texture
+                    // slot to files generated inside this level: textures owned by other levels are
+                    // not mounted when a generated level runs and render as plain white.
                     var def = templates[templateName].ToDictionary(kv => kv.Key, kv => (object)kv.Value);
                     def["name"] = layer;
                     def["internalName"] = layer;
                     def["persistentId"] = Guid.NewGuid().ToString();
-                    if (groundModel != null)
+                    def["groundmodelName"] = groundModel;
+
+                    WriteDetailTextures(zip, basePath, layer, color, noise);
+
+                    foreach (var key in def.Keys.Where(IsTextureSlot).ToList())
                     {
-                        def["groundmodelName"] = groundModel;
+                        def[key] = ResolveTextureSlot(key, layer, satellitePath, TerrainFile);
                     }
-                    // Base slots repointed to this level: satellite color, neutral ao/normal/roughness
-                    def["baseColorBaseTex"] = satellitePath;
                     def["baseColorBaseTexSize"] = baseTexSize;
-                    def["diffuseSize"] = worldSize;
-                    def["aoBaseTex"] = TerrainFile("shared_ao.png");
                     def["aoBaseTexSize"] = baseTexSize;
-                    def["normalBaseTex"] = TerrainFile("shared_nm.png");
                     def["normalBaseTexSize"] = baseTexSize;
-                    def["roughnessBaseTex"] = TerrainFile("shared_r.png");
                     def["roughnessBaseTexSize"] = baseTexSize;
-                    def["heightBaseTex"] = TerrainFile("shared_r.png");
                     def["heightBaseTexSize"] = baseTexSize;
+                    def["baseColorDetailTexSize"] = tileMeters;
+                    def["normalDetailTexSize"] = tileMeters;
+                    def["roughnessDetailTexSize"] = tileMeters;
+                    def["heightDetailTexSize"] = tileMeters;
+                    def["aoDetailTexSize"] = tileMeters;
+                    def["diffuseSize"] = worldSize;
                     terrainMaterials[layer] = def;
                 }
-                // Shared neutral base/detail textures (uniform: AO white, flat normal, mid roughness)
-                WriteUniformPng(zip, $"{basePath}/art/terrains/shared_ao.png", baseTexSize, new Rgb24(255, 255, 255));
-                WriteUniformPng(zip, $"{basePath}/art/terrains/shared_nm.png", baseTexSize, new Rgb24(128, 128, 255));
-                WriteUniformPng(zip, $"{basePath}/art/terrains/shared_r.png", baseTexSize, new Rgb24(180, 180, 180));
+                // Shared neutral base slots (AO white, flat normal, mid roughness)
+                WriteUniformPng(zip, $"{basePath}/art/terrains/shared_ao.png", 64, new Rgb24(255, 255, 255));
+                WriteUniformPng(zip, $"{basePath}/art/terrains/shared_nm.png", 64, new Rgb24(128, 128, 255));
+                WriteUniformPng(zip, $"{basePath}/art/terrains/shared_r.png", 64, new Rgb24(180, 180, 180));
             }
             else
             {
@@ -531,7 +626,7 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             WriteNdJson(zip, $"{basePath}/main/MissionGroup/Water/items.level.json", waterItems.ToArray());
 
             var center = grid.Size / 2;
-            var spawnZ = grid[center, center] - floor + 3f;
+            var spawnZ = Height(center, center) - floor + 3f;
             var spawn = Item("SpawnSphere", "spawn_default", "PlayerDropPoints");
             spawn["dataBlock"] = "SpawnSphereMarker";
             spawn["position"] = new object[] { 0, 0, spawnZ };
@@ -595,7 +690,7 @@ The level then appears in Freeroam as '{levelTitle}'.
 
         private string SerializeForestInstance(BeamNGForestInstance instance, string type, float floor, float half)
         {
-            var z = grid.ElevationAt(new TerrainPoint(instance.X, instance.Y)) - floor;
+            var z = ElevationAt(instance.X, instance.Y) - floor;
             var c = MathF.Cos(instance.YawRad);
             var s = MathF.Sin(instance.YawRad);
             var scale = Math.Clamp(instance.Scale, 0.4f, 2.5f);
@@ -692,7 +787,7 @@ The level then appears in Freeroam as '{levelTitle}'.
             {
                 var cx = box.X - half;
                 var cy = box.Y - half;
-                var groundZ = grid.ElevationAt(new TerrainPoint(box.X, box.Y)) - floor;
+                var groundZ = ElevationAt(box.X, box.Y) - floor;
                 var z0 = groundZ - 0.5f; // sink slightly into the terrain
                 var z1 = groundZ + Math.Clamp(box.Height, 2.5f, 40f);
                 var hw = Math.Clamp(box.Width, 1.5f, 100f) / 2f;
@@ -814,6 +909,147 @@ The level then appears in Freeroam as '{levelTitle}'.
             return reader.ReadToEnd();
         }
 
+        private static bool IsTextureSlot(string key)
+        {
+            return key.EndsWith("Tex", StringComparison.Ordinal)
+                || key == "macroMap" || key == "normalMap" || key == "detailMap" || key == "diffuseMap";
+        }
+
+        /// <summary>
+        /// Point a texture slot of an official template to the equivalent file generated in this level.
+        /// </summary>
+        private static string ResolveTextureSlot(string key, string layer, string satellitePath, Func<string, string> terrainFile)
+        {
+            if (key == "baseColorBaseTex" || key == "diffuseMap")
+            {
+                return satellitePath; // far view keeps the real satellite imagery
+            }
+            if (key.StartsWith("baseColor", StringComparison.Ordinal) || key == "macroMap" || key == "detailMap")
+            {
+                return terrainFile($"{layer}_d.png");
+            }
+            if (key.StartsWith("normal", StringComparison.Ordinal))
+            {
+                return key == "normalBaseTex" ? terrainFile("shared_nm.png") : terrainFile($"{layer}_n.png");
+            }
+            if (key.StartsWith("roughness", StringComparison.Ordinal))
+            {
+                return key == "roughnessBaseTex" ? terrainFile("shared_r.png") : terrainFile($"{layer}_r.png");
+            }
+            if (key.StartsWith("height", StringComparison.Ordinal))
+            {
+                return key == "heightBaseTex" ? terrainFile("shared_r.png") : terrainFile($"{layer}_h.png");
+            }
+            // ao*
+            return key == "aoBaseTex" ? terrainFile("shared_ao.png") : terrainFile("shared_ao.png");
+        }
+
+        /// <summary>
+        /// Generate the tileable colour / normal / roughness / height detail textures of one surface.
+        /// </summary>
+        private static void WriteDetailTextures(ZipArchive zip, string basePath, string layer, Rgb24 color, int noiseAmount)
+        {
+            const int size = 256;
+            var height = TileableNoise(size, layer.GetHashCode());
+
+            using (var colorImage = new Image<Rgb24>(size, size))
+            using (var roughImage = new Image<L8>(size, size))
+            using (var heightImage = new Image<L8>(size, size))
+            {
+                for (var y = 0; y < size; y++)
+                {
+                    for (var x = 0; x < size; x++)
+                    {
+                        var n = height[x, y];
+                        var delta = (int)((n - 0.5f) * 2f * noiseAmount);
+                        colorImage[x, y] = new Rgb24(
+                            (byte)Math.Clamp(color.R + delta, 0, 255),
+                            (byte)Math.Clamp(color.G + delta, 0, 255),
+                            (byte)Math.Clamp(color.B + delta, 0, 255));
+                        roughImage[x, y] = new L8((byte)Math.Clamp(150 + (n - 0.5f) * 90f, 0f, 255f));
+                        heightImage[x, y] = new L8((byte)Math.Clamp(n * 255f, 0f, 255f));
+                    }
+                }
+                SavePng(zip, $"{basePath}/art/terrains/{layer}_d.png", colorImage);
+                SavePng(zip, $"{basePath}/art/terrains/{layer}_r.png", roughImage);
+                SavePng(zip, $"{basePath}/art/terrains/{layer}_h.png", heightImage);
+            }
+
+            // Normal map from the height gradient (wrapping, so the tile stays seamless)
+            using (var normalImage = new Image<Rgb24>(size, size))
+            {
+                const float strength = 3.5f;
+                for (var y = 0; y < size; y++)
+                {
+                    for (var x = 0; x < size; x++)
+                    {
+                        var left = height[(x - 1 + size) % size, y];
+                        var right = height[(x + 1) % size, y];
+                        var up = height[x, (y - 1 + size) % size];
+                        var down = height[x, (y + 1) % size];
+                        var nx = (left - right) * strength;
+                        var ny = (up - down) * strength;
+                        var normal = System.Numerics.Vector3.Normalize(new System.Numerics.Vector3(nx, ny, 1f));
+                        normalImage[x, y] = new Rgb24(
+                            (byte)((normal.X * 0.5f + 0.5f) * 255f),
+                            (byte)((normal.Y * 0.5f + 0.5f) * 255f),
+                            (byte)((normal.Z * 0.5f + 0.5f) * 255f));
+                    }
+                }
+                SavePng(zip, $"{basePath}/art/terrains/{layer}_n.png", normalImage);
+            }
+        }
+
+        /// <summary>
+        /// Seamless value noise (two octaves, wrap-around interpolation).
+        /// </summary>
+        private static float[,] TileableNoise(int size, int seed)
+        {
+            var result = new float[size, size];
+            foreach (var (cells, weight) in new[] { (8, 0.6f), (32, 0.3f), (64, 0.1f) })
+            {
+                var random = new Random(seed ^ cells);
+                var grid = new float[cells, cells];
+                for (var gy = 0; gy < cells; gy++)
+                {
+                    for (var gx = 0; gx < cells; gx++)
+                    {
+                        grid[gx, gy] = (float)random.NextDouble();
+                    }
+                }
+                var scale = (float)cells / size;
+                for (var y = 0; y < size; y++)
+                {
+                    for (var x = 0; x < size; x++)
+                    {
+                        var fx = x * scale;
+                        var fy = y * scale;
+                        var x0 = (int)fx;
+                        var y0 = (int)fy;
+                        var tx = fx - x0;
+                        var ty = fy - y0;
+                        // Smoothstep for a softer, less blocky result
+                        tx = tx * tx * (3f - 2f * tx);
+                        ty = ty * ty * (3f - 2f * ty);
+                        var x1 = (x0 + 1) % cells;
+                        var y1 = (y0 + 1) % cells;
+                        var top = grid[x0, y0] + (grid[x1, y0] - grid[x0, y0]) * tx;
+                        var bottom = grid[x0, y1] + (grid[x1, y1] - grid[x0, y1]) * tx;
+                        result[x, y] += (top + (bottom - top) * ty) * weight;
+                    }
+                }
+            }
+            return result;
+        }
+
+        private static void SavePng<TPixel>(ZipArchive zip, string entryName, Image<TPixel> image)
+            where TPixel : unmanaged, IPixel<TPixel>
+        {
+            var entry = zip.CreateEntry(entryName);
+            using var stream = entry.Open();
+            image.SaveAsPng(stream);
+        }
+
         private static void WriteUniformPng(ZipArchive zip, string entryName, int size, Rgb24 color)
         {
             using var image = new Image<Rgb24>(size, size, color);
@@ -846,8 +1082,11 @@ The level then appears in Freeroam as '{levelTitle}'.
                 {
                     continue;
                 }
-                var halfWidth = Math.Max(1.5f, road.Width / 2f);
                 var isDirt = road.IsDirt;
+                // Real widths feel cramped behind the wheel: widen a bit and enforce a drivable
+                // minimum. Pedestrian ways are dropped by the callers.
+                var width = Math.Max(isDirt ? 5f : 6.5f, road.Width * RoadWidthFactor);
+                var halfWidth = width / 2f;
 
                 // Decimate then chunk so BeamNG splines stay smooth and objects stay small
                 var nodes = new List<float[]>();
@@ -865,7 +1104,7 @@ The level then appears in Freeroam as '{levelTitle}'.
                         }
                     }
                     last = pt;
-                    var z = grid.ElevationAt(pt) - floor + 0.1f;
+                    var z = ElevationAt(pt.X, pt.Y) - floor + 0.1f;
                     nodes.Add(new[] { pt.X - half, pt.Y - half, z });
                     if (nodes.Count == MaxDecalRoadNodes && i < points.Count - 1)
                     {
@@ -1256,7 +1495,7 @@ The level then appears in Freeroam as '{levelTitle}'.
             {
                 for (var x = 0; x < size; x++)
                 {
-                    var value = (grid[x, y] - floor) / range * 65535f;
+                    var value = (Height(x, y) - floor) / range * 65535f;
                     writer.Write((ushort)Math.Clamp(value, 0f, 65535f));
                 }
             }
@@ -1295,7 +1534,7 @@ The level then appears in Freeroam as '{levelTitle}'.
                 {
                     var srcX = Math.Min(size - 1, (int)(x * scale));
                     // PNG row 0 is north
-                    var value = (grid[srcX, size - 1 - srcY] - floor) / range * 255f;
+                    var value = (Height(srcX, size - 1 - srcY) - floor) / range * 255f;
                     image[x, y] = new L8((byte)Math.Clamp(value, 0f, 255f));
                 }
             }
@@ -1319,7 +1558,7 @@ The level then appears in Freeroam as '{levelTitle}'.
                     for (var x = 0; x < 1024; x++)
                     {
                         var srcX = Math.Min(size - 1, (int)(x * scale));
-                        var altitude = grid[srcX, size - 1 - srcY];
+                        var altitude = Height(srcX, size - 1 - srcY);
                         var t = Math.Clamp((altitude - floor) / range, 0f, 1f);
                         baseTexture[x, y] = altitude < 0.1f
                             ? new Rgba32(70, 140, 160)

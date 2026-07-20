@@ -45,8 +45,9 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             var cellSize = grid.CellSize.X;
 
             // Roads
+            // Footways and trails are not drivable and would render as thin ribbons: keep vehicle roads only
             var roadInputs = context.GetData<RoadsData>().Roads
-                .Where(r => r.Path?.Points != null && r.Path.Points.Count >= 2)
+                .Where(r => r.Path?.Points != null && r.Path.Points.Count >= 2 && r.RoadTypeInfos.Width >= 3f)
                 .Select(r => new BeamNGRoadInput(r.Path.Points.ToList(), (float)r.RoadTypeInfos.Width, IsDirt(r)))
                 .ToList();
             scope.WriteLine($"Roads: {roadInputs.Count}");
