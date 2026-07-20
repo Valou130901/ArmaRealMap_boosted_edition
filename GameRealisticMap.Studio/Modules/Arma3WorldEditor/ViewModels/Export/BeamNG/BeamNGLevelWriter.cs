@@ -51,8 +51,10 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
         private readonly List<BeamNGBuildingBox>? buildings;
         private readonly byte[]? presetLayerMap;
         private readonly List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh>? buildingMeshes;
-        // One editable object per building: a whole Swiss district is around 15-20k buildings
-        private const int MaxIndividualBuildings = 30_000;
+        // Buildings are merged per zone: one object per zone keeps the editor responsive while
+        // still letting a district be edited area by area
+        private const float BuildingZoneSize = 500f;
+        private const int MaxBuildingZones = 4_000;
 
         private const int BaseTextureSize = 4096;
         private const int PreviewSize = 512;
@@ -158,6 +160,7 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             if (decalRoads.Count > 0)
             {
                 directories.Add($"{basePath}/main/MissionGroup/Decal_Roads/");
+                directories.Add($"{basePath}/art/roads/");
             }
             if (forestByType.Count > 0)
             {
@@ -389,30 +392,36 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             var buildingItems = new List<Dictionary<string, object>>();
             if (buildingMeshes != null && buildingMeshes.Count > 0)
             {
-                // Real swissBUILDINGS3D meshes (roof shapes included), one editable object each
-                var meshes = buildingMeshes;
-                if (meshes.Count > MaxIndividualBuildings)
-                {
-                    scope.WriteLine($"Buildings: {meshes.Count} reduced to {MaxIndividualBuildings}");
-                    meshes = meshes.Take(MaxIndividualBuildings).ToList();
-                }
-                var index = 0;
-                foreach (var mesh in meshes)
+                // Real swissBUILDINGS3D meshes (roof shapes included), merged per zone so the
+                // editor stays usable: one object per BuildingZoneSize square
+                var zones = new Dictionary<(int, int), List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh>>();
+                foreach (var mesh in buildingMeshes)
                 {
                     if (mesh.Triangles.Count == 0)
                     {
                         continue;
                     }
-                    index++;
-                    // Geometry is written relative to the building centre so the engine can cull
-                    // and the object can be moved in the editor
-                    var cx = mesh.Triangles.Average(t => (t.A.X + t.B.X + t.C.X) / 3f);
-                    var cy = mesh.Triangles.Average(t => (t.A.Y + t.B.Y + t.C.Y) / 3f);
-                    var cz = mesh.Triangles.Min(t => MathF.Min(t.A.Z, MathF.Min(t.B.Z, t.C.Z)));
-                    var shapeFile = $"art/shapes/buildings/b_{index:00000}.dae";
-                    WriteText(zip, $"{basePath}/{shapeFile}", BuildSingleBuildingCollada(mesh, cx, cy, cz));
+                    var first = mesh.Triangles[0].A;
+                    var key = ((int)MathF.Floor(first.X / BuildingZoneSize), (int)MathF.Floor(first.Y / BuildingZoneSize));
+                    if (!zones.TryGetValue(key, out var list))
+                    {
+                        zones.Add(key, list = new List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh>());
+                    }
+                    list.Add(mesh);
+                }
+                var zoneIndex = 0;
+                foreach (var zone in zones.OrderBy(z => z.Key.Item2).ThenBy(z => z.Key.Item1).Take(MaxBuildingZones))
+                {
+                    zoneIndex++;
+                    var triangles = zone.Value.SelectMany(m => m.Triangles).ToList();
+                    // Geometry relative to the zone centre so the engine can cull it properly
+                    var cx = (zone.Key.Item1 + 0.5f) * BuildingZoneSize;
+                    var cy = (zone.Key.Item2 + 0.5f) * BuildingZoneSize;
+                    var cz = triangles.Min(t => MathF.Min(t.A.Z, MathF.Min(t.B.Z, t.C.Z)));
+                    var shapeFile = $"art/shapes/buildings/zone_{zoneIndex:0000}.dae";
+                    WriteText(zip, $"{basePath}/{shapeFile}", BuildBuildingsColladaFromTriangles(triangles, cx, cy, cz));
 
-                    var item = Item("TSStatic", $"building_{index:00000}", "Buildings");
+                    var item = Item("TSStatic", $"buildings_zone_{zoneIndex:0000}", "Buildings");
                     item["position"] = new object[] { MathF.Round(cx - half, 3), MathF.Round(cy - half, 3), MathF.Round(cz - floor, 3) };
                     item["shapeName"] = $"levels/{levelName}/{shapeFile}";
                     item["collisionType"] = "Visible Mesh";
@@ -421,8 +430,8 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
                     item["useInstanceRenderData"] = true;
                     buildingItems.Add(item);
                 }
-                buildingCount = buildingItems.Count;
-                scope.WriteLine($"Buildings: {buildingCount} individual swissBUILDINGS3D objects");
+                buildingCount = buildingMeshes.Count;
+                scope.WriteLine($"Buildings: {buildingCount} swissBUILDINGS3D buildings in {buildingItems.Count} zone objects ({BuildingZoneSize} m zones)");
             }
             else if (buildings != null && buildings.Count > 0)
             {
@@ -459,7 +468,8 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             if (decalRoads.Count > 0)
             {
                 WriteNdJson(zip, $"{basePath}/main/MissionGroup/Decal_Roads/items.level.json", decalRoads.ToArray());
-                scope.WriteLine($"Roads: {decalRoads.Count} DecalRoad segments");
+                WriteRoadMaterials(zip, basePath);
+                scope.WriteLine($"Roads: {decalRoads.Count} DecalRoad segments (self-contained materials)");
             }
 
             if (forestByType.Count > 0 || (buildings != null && buildings.Count > 0) || (buildingMeshes != null && buildingMeshes.Count > 0))
@@ -708,10 +718,10 @@ The level then appears in Freeroam as '{levelTitle}'.
         }
 
         /// <summary>
-        /// One swissBUILDINGS3D building as its own Collada shape. Vertices are relative to the
-        /// building centre so the TSStatic can be selected, moved or deleted individually.
+        /// swissBUILDINGS3D buildings of one zone as a single Collada shape. Vertices are relative
+        /// to the zone centre so the TSStatic can be culled, moved or deleted per area.
         /// </summary>
-        private string BuildSingleBuildingCollada(GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh mesh, float cx, float cy, float cz)
+        private string BuildBuildingsColladaFromTriangles(List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.MeshTriangle> meshTriangles, float cx, float cy, float cz)
         {
             var positions = new StringBuilder();
             var normals = new StringBuilder();
@@ -719,7 +729,7 @@ The level then appears in Freeroam as '{levelTitle}'.
             var vertexCount = 0;
             var normalCount = 0;
             var culture = System.Globalization.CultureInfo.InvariantCulture;
-            foreach (var triangle in mesh.Triangles)
+            foreach (var triangle in meshTriangles)
             {
                 var a = new System.Numerics.Vector3(triangle.A.X - cx, triangle.A.Y - cy, triangle.A.Z - cz);
                 var b = new System.Numerics.Vector3(triangle.B.X - cx, triangle.B.Y - cy, triangle.B.Z - cz);
@@ -879,23 +889,107 @@ The level then appears in Freeroam as '{levelTitle}'.
         private void EmitRoadDecals(List<Dictionary<string, object>> result, List<float[]> centerNodes, float halfWidth, bool isDirt, ref int roadIndex)
         {
             roadIndex++;
-            // Base surface: plain textures, no lane lines baked in
-            result.Add(MakeDecalRoad(ToNodes(centerNodes, 0f, halfWidth), isDirt ? "m_dirt_road" : "m_asphalt_damaged_01",
+            // Self-contained materials shipped in this level (see WriteRoadMaterials): materials of
+            // other official levels resolve their textures from those levels' packages, which are
+            // not mounted here, and would render plain white.
+            result.Add(MakeDecalRoad(ToNodes(centerNodes, 0f, halfWidth), isDirt ? "grm_road_dirt" : "grm_road_asphalt",
                 $"road_{roadIndex}", 10, isDirt ? 10 : 12));
 
-            // Soft edge that blends the road border into the surrounding grass (both sides)
-            var edgeMaterial = isDirt ? "m_road_edge_dirt_grass" : "m_road_asphalt_edge_grass";
-            var edgeWidth = 1.8f;
-            var edgeOffset = halfWidth - 0.1f;
-            result.Add(MakeDecalRoad(ToNodes(centerNodes, -edgeOffset, edgeWidth), edgeMaterial, $"road_{roadIndex}_edge_l", 11, 8));
-            result.Add(MakeDecalRoad(ToNodes(centerNodes, edgeOffset, edgeWidth), edgeMaterial, $"road_{roadIndex}_edge_r", 11, 8));
-
-            // Center dashed white line only on wide asphalt roads (2-lane)
+            // Center dashed white line on wide asphalt roads (2-lane)
             if (!isDirt && halfWidth >= 3f)
             {
-                result.Add(MakeDecalRoad(ToNodes(centerNodes, 0f, 0.15f), "m_line_white_discontinue",
-                    $"road_{roadIndex}_center", 15, 6.4));
+                result.Add(MakeDecalRoad(ToNodes(centerNodes, 0f, 0.16f), "grm_line_white",
+                    $"road_{roadIndex}_center", 15, 8));
             }
+        }
+
+        /// <summary>
+        /// Road textures and materials generated into the level itself, so roads never depend on
+        /// assets owned by another level.
+        /// </summary>
+        private void WriteRoadMaterials(ZipArchive zip, string basePath)
+        {
+            WriteNoisePng(zip, $"{basePath}/art/roads/asphalt.png", 512, new Rgba32(58, 58, 62, 255), 14);
+            WriteNoisePng(zip, $"{basePath}/art/roads/dirt.png", 512, new Rgba32(122, 101, 78, 255), 22);
+            WriteDashedLinePng(zip, $"{basePath}/art/roads/line_white.png", 64, 512);
+
+            var materials = new Dictionary<string, object>
+            {
+                ["grm_road_asphalt"] = RoadMaterial("grm_road_asphalt", $"levels/{levelName}/art/roads/asphalt.png", "ASPHALT", false),
+                ["grm_road_dirt"] = RoadMaterial("grm_road_dirt", $"levels/{levelName}/art/roads/dirt.png", "DIRT", false),
+                ["grm_line_white"] = RoadMaterial("grm_line_white", $"levels/{levelName}/art/roads/line_white.png", "SOLID_LINE", true),
+            };
+            WriteJson(zip, $"{basePath}/art/roads/main.materials.json", materials);
+        }
+
+        private static Dictionary<string, object> RoadMaterial(string name, string texture, string annotation, bool transparent)
+        {
+            var stage = new Dictionary<string, object>
+            {
+                ["colorMap"] = texture,
+                ["specularPower"] = 1,
+                ["useAnisotropic"] = true,
+            };
+            var material = new Dictionary<string, object>
+            {
+                ["name"] = name,
+                ["mapTo"] = name,
+                ["class"] = "Material",
+                ["persistentId"] = Guid.NewGuid().ToString(),
+                ["Stages"] = new object[] { stage, new Dictionary<string, object>(), new Dictionary<string, object>(), new Dictionary<string, object>() },
+                ["annotation"] = annotation,
+                ["materialTag0"] = "beamng",
+                ["materialTag1"] = "Road",
+            };
+            if (transparent)
+            {
+                material["translucent"] = true;
+                material["translucentBlendOp"] = "LerpAlpha";
+                material["alphaTest"] = false;
+                material["alphaRef"] = 0;
+            }
+            return material;
+        }
+
+        private static void WriteNoisePng(ZipArchive zip, string entryName, int size, Rgba32 baseColor, int noise)
+        {
+            var random = new Random(entryName.GetHashCode());
+            using var image = new Image<Rgba32>(size, size);
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var delta = random.Next(-noise, noise + 1);
+                    image[x, y] = new Rgba32(
+                        (byte)Math.Clamp(baseColor.R + delta, 0, 255),
+                        (byte)Math.Clamp(baseColor.G + delta, 0, 255),
+                        (byte)Math.Clamp(baseColor.B + delta, 0, 255),
+                        255);
+                }
+            }
+            var entry = zip.CreateEntry(entryName);
+            using var stream = entry.Open();
+            image.SaveAsPng(stream);
+        }
+
+        /// <summary>
+        /// Transparent strip with a white dash in the middle, tiled along the road by textureLength.
+        /// </summary>
+        private static void WriteDashedLinePng(ZipArchive zip, string entryName, int width, int height)
+        {
+            using var image = new Image<Rgba32>(width, height, new Rgba32(255, 255, 255, 0));
+            var dashStart = height / 4;
+            var dashEnd = height * 3 / 4;
+            for (var y = dashStart; y < dashEnd; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    image[x, y] = new Rgba32(245, 245, 245, 255);
+                }
+            }
+            var entry = zip.CreateEntry(entryName);
+            using var stream = entry.Open();
+            image.SaveAsPng(stream);
         }
 
         /// <summary>
