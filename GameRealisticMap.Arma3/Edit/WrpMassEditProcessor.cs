@@ -1,7 +1,10 @@
 ﻿using System.Numerics;
 using BIS.WRP;
 using GameRealisticMap.Algorithms;
+using GameRealisticMap.Arma3.GameEngine;
 using GameRealisticMap.Arma3.TerrainBuilder;
+using GameRealisticMap.ElevationModel;
+using GameRealisticMap.Geometries;
 using GameRealisticMap.Reporting;
 using Pmad.ProgressTracking;
 
@@ -36,6 +39,16 @@ namespace GameRealisticMap.Arma3.Edit
                 foreach (var replace in operations.Replace.WithProgress(_progressSystem, "Replace"))
                 {
                     totalChanges += Replace(objects, replace);
+                }
+            }
+
+            if (operations.SnapToGround.Count > 0)
+            {
+                var grid = world.ToElevationGrid();
+                var modelCache = new Dictionary<string, ModelInfo?>(StringComparer.OrdinalIgnoreCase);
+                foreach (var snap in operations.SnapToGround.WithProgress(_progressSystem, "SnapToGround"))
+                {
+                    totalChanges += SnapToGround(objects, grid, modelCache, snap);
                 }
             }
 
@@ -125,6 +138,60 @@ namespace GameRealisticMap.Arma3.Edit
             }
             Console.WriteLine($"Reduce '{operation.Model}' -> {changes} removed");
             return changes;
+        }
+
+        private int SnapToGround(List<EditableWrpObject?> objects, ElevationGrid grid, Dictionary<string, ModelInfo?> modelCache, WrpSnapToGround operation)
+        {
+            var changes = 0;
+            var unknownModels = 0;
+            foreach (var obj in objects)
+            {
+                if (obj == null || string.IsNullOrEmpty(obj.Model) || !MatchesFilter(obj.Model, operation))
+                {
+                    continue;
+                }
+                if (!modelCache.TryGetValue(obj.Model, out var model))
+                {
+                    modelCache.Add(obj.Model, model = _library.TryResolveByPath(obj.Model, out var resolved) ? resolved : null);
+                }
+                if (model == null)
+                {
+                    unknownModels++;
+                    continue;
+                }
+                var matrix = obj.Transform.Matrix;
+                var rotateOnly = matrix;
+                rotateOnly.M41 = 0;
+                rotateOnly.M42 = 0;
+                rotateOnly.M43 = 0;
+                var pointToCenter = Vector3.Transform(model.BoundingCenter, rotateOnly);
+                var groundElevation = grid.ElevationAt(new TerrainPoint(matrix.M41 - pointToCenter.X, matrix.M43 - pointToCenter.Z)) + pointToCenter.Y;
+                var aboveGround = matrix.M42 - groundElevation;
+                if (aboveGround > operation.MinDistance || (operation.IncludeBuried && aboveGround < -operation.MinDistance))
+                {
+                    obj.Transform.Altitude = groundElevation;
+                    changes++;
+                }
+            }
+            _progressSystem.WriteLine($"SnapToGround '{operation.Model}' (minDistance={operation.MinDistance:0.00}, includeBuried={operation.IncludeBuried}) -> {changes} changes");
+            if (unknownModels > 0)
+            {
+                _progressSystem.WriteLine($"SnapToGround: {unknownModels} objects ignored, their model file was not found (mod not loaded?)");
+            }
+            return changes;
+        }
+
+        private static bool MatchesFilter(string model, WrpSnapToGround operation)
+        {
+            if (string.IsNullOrEmpty(operation.Model))
+            {
+                return true;
+            }
+            if (operation.IsPattern)
+            {
+                return model.Contains(operation.Model, StringComparison.OrdinalIgnoreCase);
+            }
+            return string.Equals(model, operation.Model, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool Matches(string? model, WrpMassReduce operation)

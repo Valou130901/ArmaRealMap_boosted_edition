@@ -19,6 +19,11 @@ namespace GameRealisticMap.Arma3.IO
 
         public bool UsePboProject { get; set; }
 
+        /// <summary>
+        /// Last value used for "Swisstopo high-res elevation", applied to newly created map configs.
+        /// </summary>
+        public bool? UseSwisstopoElevationByDefault { get; set; }
+
         [SupportedOSPlatform("windows")]
         public ProjectDrive CreateProjectDrive()
         {

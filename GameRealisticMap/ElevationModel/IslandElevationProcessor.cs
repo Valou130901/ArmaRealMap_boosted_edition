@@ -12,8 +12,11 @@ namespace GameRealisticMap.ElevationModel
     internal class IslandElevationProcessor
     {
         private const float OceanFloorElevation = -50f;
-        private const float OceanFullDepthDistance = 500f; // Distance from boundary at which ocean floor depth is reached
+        private const float OceanFullDepthDistance = 500f; // Distance from the beach at which ocean floor depth is reached
         private const float MinLandElevation = 0.2f; // Anti-flooding: land inside the boundary stays above this
+        private const float BeachElevation = 1.5f; // Flat dry band above sea level, usable to build coastal villages
+        private const float BeachShoreElevation = 0.7f; // Seaward end of the beach, still above water
+        private const float BeachWidth = 300f; // Width of the flat beach band between the coastal slope and the sea
 
         private bool[,]? insideMask;
 
@@ -351,19 +354,28 @@ namespace GameRealisticMap.ElevationModel
                         float mixT = Math.Min(minDistance / 150f, 1f);
                         float baseElevation = edgeElevation[x, y] + (smoothedEdge[x, y] - edgeElevation[x, y]) * mixT;
 
-                        // Seabed profile from boundary distance: gentle slope near the shore,
-                        // reaching the ocean floor at OceanFullDepthDistance (smoothstep curve)
-                        float td = Math.Min(minDistance / OceanFullDepthDistance, 1f);
-                        float seabed = OceanFloorElevation * (td * td * (3f - 2f * td));
-
-                        // Blend the island edge elevation into the seabed profile. The ramp length
-                        // scales with the edge elevation (~12% slope) so high boundaries become
-                        // long coastal slopes and low boundaries become beaches right at the edge.
-                        float rampDistance = Math.Clamp(baseElevation * 8f, 30f, 2000f);
-                        float t = Math.Min(minDistance / rampDistance, 1f);
-                        float weight = t * t * (3f - 2f * t); // Smoothstep(0, 1, t)
-
-                        grid[x, y] = (baseElevation * (1f - weight)) + (seabed * weight);
+                        // Three-phase coast, always connected to the island edge:
+                        // 1. slope from the island edge down to the beach (~10%, longer for high edges)
+                        // 2. flat dry beach band, buildable (villages), slightly tilted towards the sea
+                        // 3. seabed descent to the ocean floor
+                        float rampDistance = Math.Clamp((baseElevation - BeachElevation) * 10f, 30f, 2500f);
+                        if (minDistance <= rampDistance)
+                        {
+                            float t = minDistance / rampDistance;
+                            float weight = t * t * (3f - 2f * t); // Smoothstep(0, 1, t)
+                            grid[x, y] = (baseElevation * (1f - weight)) + (BeachElevation * weight);
+                        }
+                        else if (minDistance <= rampDistance + BeachWidth)
+                        {
+                            float t = (minDistance - rampDistance) / BeachWidth;
+                            grid[x, y] = BeachElevation + ((BeachShoreElevation - BeachElevation) * t);
+                        }
+                        else
+                        {
+                            float td = Math.Min((minDistance - rampDistance - BeachWidth) / OceanFullDepthDistance, 1f);
+                            float weight = td * td * (3f - 2f * td);
+                            grid[x, y] = (BeachShoreElevation * (1f - weight)) + (OceanFloorElevation * weight);
+                        }
                     }
                 }
             });
