@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -22,6 +23,7 @@ using GameRealisticMap.Studio.Modules.Arma3Data;
 using GameRealisticMap.Studio.Modules.Arma3Data.Services;
 using GameRealisticMap.Studio.Modules.Arma3Data.ViewModels;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export;
+using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.BeamNG;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Import;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.MassEdit;
 using GameRealisticMap.Studio.Modules.AssetBrowser.ViewModels;
@@ -804,6 +806,66 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
             return windowManager.ShowDialogAsync(new ReplaceViewModel(this));
         }
 
+        public Task OpenSnapToGround()
+        {
+            return windowManager.ShowDialogAsync(new SnapToGroundViewModel(this));
+        }
+
+        public bool CanOpenInBuldozer => CanGenerateMod;
+
+        public Task OpenInBuldozer()
+        {
+            var prefix = _configFile?.PboPrefix;
+            if (string.IsNullOrEmpty(prefix))
+            {
+                return Task.CompletedTask;
+            }
+            var worldFileName = FileName;
+            var isDirty = IsDirty;
+            _ = IoC.Get<IProgressTool>().RunTask("Buldozer", async task =>
+            {
+                if (isDirty)
+                {
+                    task.Scope.WriteLine("Warning: unsaved changes, Buldozer will show the last saved version of the map.");
+                }
+
+                Arma3ToolsHelper.EnsureProjectDrive();
+
+                // Buldozer reads the paa referenced by rvmat files, but the tool writes png tiles: convert missing/outdated ones
+                var layersPath = arma3Data.ProjectDrive.GetFullPath(prefix + "\\data\\layers");
+                if (Directory.Exists(layersPath))
+                {
+                    var toConvert = Directory.GetFiles(layersPath, "*.png")
+                        .Where(png =>
+                        {
+                            var paa = Path.ChangeExtension(png, ".paa");
+                            return !File.Exists(paa) || File.GetLastWriteTimeUtc(paa) < File.GetLastWriteTimeUtc(png);
+                        })
+                        .ToList();
+                    if (toConvert.Count > 0)
+                    {
+                        await Arma3ToolsHelper.ImageToPAA(task.Scope, toConvert);
+                    }
+                }
+
+                var arma3Path = Arma3ToolsHelper.GetArma3Path();
+                if (string.IsNullOrEmpty(arma3Path))
+                {
+                    throw new ApplicationException("Arma 3 was not found.");
+                }
+                var buldozerCfg = @"P:\buldozer.cfg";
+                if (!File.Exists(buldozerCfg))
+                {
+                    File.WriteAllText(buldozerCfg, string.Empty);
+                }
+                var exe = Path.Combine(arma3Path, "arma3_x64.exe");
+                var arguments = $"-buldozer -name=Buldozer -window -exThreads=0 -noAsserts -noPause -cfg={buldozerCfg} \"P:\\{prefix}\\{worldFileName}\"";
+                task.Scope.WriteLine($"\"{exe}\" {arguments}");
+                Process.Start(new ProcessStartInfo(exe, arguments) { WorkingDirectory = arma3Path, UseShellExecute = false });
+            }, false);
+            return Task.CompletedTask;
+        }
+
         public Task OpenObjectExport()
         {
             return windowManager.ShowDialogAsync(new FileExporterViewModel(this));
@@ -834,6 +896,49 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                 if (dialog.ShowDialog() == true)
                 {
                     ProgressToolHelper.Start(new ExportHeightmapPngTask(_world, dialog.FileName));
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        public async Task ExportBeamNGLevel()
+        {
+            if (_world != null)
+            {
+                var dialog = new SaveFileDialog();
+                dialog.Filter = "BeamNG.drive mod (zip)|*.zip";
+                dialog.FileName = Path.GetFileNameWithoutExtension(FileName) + "-beamng.zip";
+                if (dialog.ShowDialog() == true)
+                {
+                    if (roads == null)
+                    {
+                        LoadRoads();
+                    }
+                    var satMap = _imagery?.GetSatMap(arma3Data.ProjectDrive);
+                    HugeImage<Rgb24>? idMap = null;
+                    List<GameRealisticMap.Arma3.Assets.TerrainMaterialDefinition>? materialDefs = null;
+                    if (_imagery != null)
+                    {
+                        var materialLibrary = await GetExportMaterialLibrary();
+                        materialDefs = materialLibrary.Definitions;
+                        idMap = _imagery.GetIdMap(arma3Data.ProjectDrive, materialLibrary);
+                    }
+                    ProgressToolHelper.Start(new ExportBeamNGLevelTask(
+                        _world, Path.GetFileNameWithoutExtension(FileName), satMap, idMap, materialDefs, roads?.Roads, arma3Data.Library, dialog.FileName));
+                }
+            }
+        }
+
+        public Task ExportHeightmapBeamNG()
+        {
+            if (_world != null)
+            {
+                var dialog = new SaveFileDialog();
+                dialog.Filter = "16-bit grayscale PNG|*.png";
+                dialog.FileName = Path.GetFileNameWithoutExtension(FileName) + "-beamng-heightmap.png";
+                if (dialog.ShowDialog() == true)
+                {
+                    ProgressToolHelper.Start(new ExportHeightmapBeamNGTask(_world, dialog.FileName));
                 }
             }
             return Task.CompletedTask;

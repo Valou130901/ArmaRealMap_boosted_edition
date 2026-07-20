@@ -55,6 +55,9 @@
                 <Button Margin="5" Padding="10" cal:Message.Attach="GenerateMod">
                     <Run Text="{x:Static r:Labels.GenerateModForArma3}"/>
                 </Button>
+                <Button Margin="5" Padding="10" cal:Message.Attach="GenerateBeamNG">
+                    <Run Text="Générer un niveau BeamNG.drive"/>
+                </Button>
             </StackPanel>
 
             <StackPanel Margin="5" Orientation="Horizontal" >

@@ -195,8 +195,14 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel HorizontalAlignment="Center">
-                            <Button Margin="10" Padding="10" MaxWidth="220" cal:Message.Attach="NewGenericMapConfig">
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                            <Button Margin="10" Padding="10" MaxWidth="220" cal:Message.Attach="NewBeamNGMapConfig" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <Image Source="pack://application:,,,/GameRealisticMap.Studio;component/Resources/Icons/MapConfig.png" Width="24" Height="24" Margin="0 0 0 5"/>
+                                    <TextBlock TextWrapping="Wrap" TextAlignment="Center"><Run Text="Créer une carte BeamNG.drive" /></TextBlock>
+                                </StackPanel>
+                            </Button>
+                            <Button Margin="10" Padding="10" MaxWidth="220" cal:Message.Attach="NewGenericMapConfig" VerticalAlignment="Top">
                                 <StackPanel>
                                     <Image Source="pack://application:,,,/GameRealisticMap.Studio;component/Resources/Icons/MapExportConfig.png" Width="24" Height="24" Margin="0 0 0 5"/>
                                     <TextBlock TextWrapping="Wrap"><Run Text="{x:Static r:Labels.CreateAMapConfiguration}" /></TextBlock>

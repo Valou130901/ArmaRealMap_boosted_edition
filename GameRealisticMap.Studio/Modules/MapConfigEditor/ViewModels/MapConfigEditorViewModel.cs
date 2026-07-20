@@ -272,6 +272,14 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
         protected override async Task DoNew()
         {
             Config = new Arma3MapConfigJson();
+            try
+            {
+                Config.UseSwisstopoElevation = (await WorkspaceSettings.Load()).UseSwisstopoElevationByDefault ?? false;
+            }
+            catch
+            {
+                // Preference only
+            }
             var assetConfig = _shell.Documents.OfType<AssetConfigEditorViewModel>().Select(r => r.FilePath ?? r.FileName).FirstOrDefault();
             Config.AssetConfigFile = assetConfig ?? BuiltinAssetConfigFiles.FirstOrDefault() ?? string.Empty;
             Config.Satellite = Config.Satellite ?? new SatelliteImageOptions();
@@ -401,21 +409,51 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
             return Task.CompletedTask;
         }
 
-        public Task GenerateMap()
+        public async Task GenerateMap()
         {
+            await SaveConfigBeforeGenerate();
+
             IoC.Get<IProgressTool>()
                 .RunTask(Labels.GenerateMapForArma3WRP, DoGenerateMap);
-            return Task.CompletedTask;
         }
 
-        public Task GenerateMod()
+        public async Task GenerateMod()
         {
+            await SaveConfigBeforeGenerate();
+
             Arma3ToolsHelper.EnsureProjectDrive();
 
             IoC.Get<IProgressTool>()
                 .RunTask(Labels.GenerateModForArma3, DoGenerateMod);
+        }
 
-            return Task.CompletedTask;
+        public async Task GenerateBeamNG()
+        {
+            await SaveConfigBeforeGenerate();
+
+            var dialog = new SaveFileDialog();
+            dialog.Filter = "BeamNG.drive mod (zip)|*.zip";
+            dialog.FileName = Path.GetFileNameWithoutExtension(FileName) + "-beamng.zip";
+            if (dialog.ShowDialog() == true)
+            {
+                var a3config = Config.ToArma3MapConfig();
+                var filename = dialog.FileName;
+                IoC.Get<IProgressTool>()
+                    .RunTask("BeamNG", task => Arma3WorldEditor.ViewModels.Export.BeamNG.BeamNGDirectGenerator.Generate(
+                        task, a3config, IoC.Get<IGrmConfigService>().GetSources(), filename));
+            }
+        }
+
+        /// <summary>
+        /// Persist pending config changes (like the Swisstopo checkbox) so they are not lost if
+        /// the editor is closed without saving after a generation.
+        /// </summary>
+        private async Task SaveConfigBeforeGenerate()
+        {
+            if (IsDirty && !IsNew && !string.IsNullOrEmpty(FilePath))
+            {
+                await Save(FilePath);
+            }
         }
         
 
@@ -770,7 +808,25 @@ namespace GameRealisticMap.Studio.Modules.MapConfigEditor.ViewModels
                     Config.UseSwisstopoElevation = value;
                     NotifyOfPropertyChange();
                     IsDirty = true;
+                    _ = RememberSwisstopoPreference(value);
                 }
+            }
+        }
+
+        private static async Task RememberSwisstopoPreference(bool value)
+        {
+            try
+            {
+                var settings = await WorkspaceSettings.Load();
+                if (settings.UseSwisstopoElevationByDefault != value)
+                {
+                    settings.UseSwisstopoElevationByDefault = value;
+                    settings.Save();
+                }
+            }
+            catch
+            {
+                // Preference only, never block the editor
             }
         }
 

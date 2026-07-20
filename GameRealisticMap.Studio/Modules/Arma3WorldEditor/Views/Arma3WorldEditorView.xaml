@@ -41,6 +41,9 @@
                 <Button Margin="5" Padding="10" cal:Message.Attach="GenerateMod" IsEnabled="{Binding CanGenerateMod}">
                     <Run Text="{x:Static r:Labels.GenerateModForArma3}"/>
                 </Button>
+                <Button Margin="5" Padding="10" cal:Message.Attach="OpenInBuldozer" IsEnabled="{Binding CanGenerateMod}">
+                    <Run Text="Ouvrir dans Buldozer"/>
+                </Button>
             </StackPanel>
             
             <Expander IsExpanded="True" Margin="10">
@@ -254,6 +257,12 @@
                         <Button Margin="5" Padding="10" cal:Message.Attach="ExportHeightmapPng">
                             <Run Text="Export heightmap PNG (Minecraft)" />
                         </Button>
+                        <Button Margin="5" Padding="10" cal:Message.Attach="ExportHeightmapBeamNG">
+                            <Run Text="Export heightmap PNG (BeamNG)" />
+                        </Button>
+                        <Button Margin="5" Padding="10" cal:Message.Attach="ExportBeamNGLevel">
+                            <Run Text="Export niveau BeamNG (zip jouable)" />
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Expander>
@@ -275,6 +284,9 @@
                         </Button>
                         <Button Margin="5" Padding="10" cal:Message.Attach="OpenReduce">
                             <Run Text="{x:Static r:Labels.Reduce}" />
+                        </Button>
+                        <Button Margin="5" Padding="10" cal:Message.Attach="OpenSnapToGround">
+                            <Run Text="Coller au sol" />
                         </Button>
                         <Button Margin="5" Padding="10" cal:Message.Attach="TakeAerialImages">
                             <Run Text="{x:Static r:Labels.TakeAerialImages}"/>

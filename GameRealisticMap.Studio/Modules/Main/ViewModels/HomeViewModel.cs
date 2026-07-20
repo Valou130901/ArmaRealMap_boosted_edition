@@ -114,6 +114,13 @@ namespace GameRealisticMap.Studio.Modules.Main.ViewModels
             await Create(IoC.Get<GenericMapConfigEditorProvider>());
         }
 
+        public async Task NewBeamNGMapConfig()
+        {
+            // Same map configuration editor: pick the area, then use the
+            // "Générer un niveau BeamNG.drive" button (no Arma 3 map required)
+            await Create(IoC.Get<MapConfigEditorProvider>());
+        }
+
 
         public async Task RefreshArma3ToolChain()
         {
