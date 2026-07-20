@@ -71,7 +71,7 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             scope.WriteLine($"Trees: {trees.Count} sampled in {forestPolygons.Count} forest polygons");
 
             // Buildings: real swissBUILDINGS3D meshes for Swiss maps, OSM footprint boxes otherwise
-            List<SwissBuildings3dDownloader.MeshTriangle>? buildingMeshes = null;
+            List<SwissBuildings3dDownloader.BuildingMesh>? buildingMeshes = null;
             if (config.UseSwisstopoElevation)
             {
                 try
@@ -94,7 +94,7 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
                     b.Box.Width, b.Box.Height,
                     EstimateHeight(b.TypeId)))
                 .ToList();
-            scope.WriteLine($"Buildings: {(buildingMeshes != null ? $"{buildingMeshes.Count} swissBUILDINGS3D triangles" : $"{buildings.Count} OSM boxes")}");
+            scope.WriteLine($"Buildings: {(buildingMeshes != null ? $"{buildingMeshes.Count} swissBUILDINGS3D buildings" : $"{buildings.Count} OSM boxes")}");
 
             // Lakes: one best-effort WaterBlock per lake (axis-aligned box of the polygon)
             var ponds = new List<BeamNGPond>();

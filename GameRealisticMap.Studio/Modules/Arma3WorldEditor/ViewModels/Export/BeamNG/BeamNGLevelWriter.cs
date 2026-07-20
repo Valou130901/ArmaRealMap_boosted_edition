@@ -50,9 +50,9 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
         private readonly List<BeamNGPond>? ponds;
         private readonly List<BeamNGBuildingBox>? buildings;
         private readonly byte[]? presetLayerMap;
-        private readonly List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.MeshTriangle>? buildingMeshes;
-        // A whole Swiss district can reach a few million building triangles; keep the ceiling high
-        private const int MaxBuildingMeshTriangles = 5_000_000;
+        private readonly List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh>? buildingMeshes;
+        // One editable object per building: a whole Swiss district is around 15-20k buildings
+        private const int MaxIndividualBuildings = 30_000;
 
         private const int BaseTextureSize = 4096;
         private const int PreviewSize = 512;
@@ -78,7 +78,7 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             List<BeamNGRoadInput>? roads, List<BeamNGForestInstance>? vegetation,
             List<BeamNGPond>? ponds = null, List<BeamNGBuildingBox>? buildings = null,
             HugeImage<Rgba32>? satMapRgba = null, byte[]? presetLayerMap = null,
-            List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.MeshTriangle>? buildingMeshes = null)
+            List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh>? buildingMeshes = null)
         {
             this.buildingMeshes = buildingMeshes;
             this.grid = grid;
@@ -168,6 +168,11 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             if (forestByType.Count > 0 || (buildings != null && buildings.Count > 0) || (buildingMeshes != null && buildingMeshes.Count > 0))
             {
                 directories.Add($"{basePath}/art/shapes/");
+            }
+            if (buildingMeshes != null && buildingMeshes.Count > 0)
+            {
+                directories.Add($"{basePath}/art/shapes/buildings/");
+                directories.Add($"{basePath}/main/MissionGroup/Buildings/");
             }
             foreach (var dir in directories)
             {
@@ -334,6 +339,10 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
             {
                 missionGroupItems.Add(Item("SimGroup", "Decal_Roads", "MissionGroup"));
             }
+            if (buildingMeshes != null && buildingMeshes.Count > 0)
+            {
+                missionGroupItems.Add(Item("SimGroup", "Buildings", "MissionGroup"));
+            }
             WriteNdJson(zip, $"{basePath}/main/MissionGroup/items.level.json", missionGroupItems.ToArray());
 
             var levelInfo = Item("LevelInfo", "theLevelInfo", "Level_objects");
@@ -377,26 +386,43 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
 
             var otherItems = new List<Dictionary<string, object>> { terrainBlock };
             var buildingCount = 0;
+            var buildingItems = new List<Dictionary<string, object>>();
             if (buildingMeshes != null && buildingMeshes.Count > 0)
             {
-                // Real swissBUILDINGS3D meshes (roof shapes included)
+                // Real swissBUILDINGS3D meshes (roof shapes included), one editable object each
                 var meshes = buildingMeshes;
-                if (meshes.Count > MaxBuildingMeshTriangles)
+                if (meshes.Count > MaxIndividualBuildings)
                 {
-                    scope.WriteLine($"Buildings: {meshes.Count} triangles reduced to {MaxBuildingMeshTriangles}");
-                    meshes = meshes.Take(MaxBuildingMeshTriangles).ToList();
+                    scope.WriteLine($"Buildings: {meshes.Count} reduced to {MaxIndividualBuildings}");
+                    meshes = meshes.Take(MaxIndividualBuildings).ToList();
                 }
-                buildingCount = meshes.Count;
-                WriteText(zip, $"{basePath}/art/shapes/buildings.dae", BuildBuildingsColladaFromMeshes(meshes, floor, half));
-                var meshStatic = Item("TSStatic", "buildings", "Other");
-                meshStatic["position"] = new object[] { 0, 0, 0 };
-                meshStatic["shapeName"] = $"levels/{levelName}/art/shapes/buildings.dae";
-                meshStatic["collisionType"] = "Visible Mesh";
-                meshStatic["decalType"] = "Visible Mesh";
-                meshStatic["prebuildCollisionData"] = 0;
-                meshStatic["useInstanceRenderData"] = true;
-                otherItems.Add(meshStatic);
-                scope.WriteLine($"Buildings: {buildingCount} real swissBUILDINGS3D triangles");
+                var index = 0;
+                foreach (var mesh in meshes)
+                {
+                    if (mesh.Triangles.Count == 0)
+                    {
+                        continue;
+                    }
+                    index++;
+                    // Geometry is written relative to the building centre so the engine can cull
+                    // and the object can be moved in the editor
+                    var cx = mesh.Triangles.Average(t => (t.A.X + t.B.X + t.C.X) / 3f);
+                    var cy = mesh.Triangles.Average(t => (t.A.Y + t.B.Y + t.C.Y) / 3f);
+                    var cz = mesh.Triangles.Min(t => MathF.Min(t.A.Z, MathF.Min(t.B.Z, t.C.Z)));
+                    var shapeFile = $"art/shapes/buildings/b_{index:00000}.dae";
+                    WriteText(zip, $"{basePath}/{shapeFile}", BuildSingleBuildingCollada(mesh, cx, cy, cz));
+
+                    var item = Item("TSStatic", $"building_{index:00000}", "Buildings");
+                    item["position"] = new object[] { MathF.Round(cx - half, 3), MathF.Round(cy - half, 3), MathF.Round(cz - floor, 3) };
+                    item["shapeName"] = $"levels/{levelName}/{shapeFile}";
+                    item["collisionType"] = "Visible Mesh";
+                    item["decalType"] = "Visible Mesh";
+                    item["prebuildCollisionData"] = 0;
+                    item["useInstanceRenderData"] = true;
+                    buildingItems.Add(item);
+                }
+                buildingCount = buildingItems.Count;
+                scope.WriteLine($"Buildings: {buildingCount} individual swissBUILDINGS3D objects");
             }
             else if (buildings != null && buildings.Count > 0)
             {
@@ -424,6 +450,11 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Bea
                 scope.WriteLine($"Buildings: {buildingCount} collision boxes");
             }
             WriteNdJson(zip, $"{basePath}/main/MissionGroup/Level_objects/Other/items.level.json", otherItems.ToArray());
+
+            if (buildingItems.Count > 0)
+            {
+                WriteNdJson(zip, $"{basePath}/main/MissionGroup/Buildings/items.level.json", buildingItems.ToArray());
+            }
 
             if (decalRoads.Count > 0)
             {
@@ -509,7 +540,7 @@ Surface layers: {(useLayers ? string.Join(", ", materialNames) : "single materia
 Roads:          {decalRoads.Count} DecalRoad segments (plain asphalt/dirt base, grass edge blend, dashed center line on wide roads)
 Forest:         {forestByType.Sum(kv => kv.Value.Count)} instances ({string.Join(", ", forestByType.Select(kv => $"{kv.Value.Count} {kv.Key}"))})
 Lakes:          {Math.Min(ponds?.Count ?? 0, 2000)} WaterBlocks
-Buildings:      {buildingCount} grey collision boxes (buildings.dae)
+Buildings:      {buildingCount} objects{(buildingMeshes != null && buildingMeshes.Count > 0 ? " (individual swissBUILDINGS3D shapes, editable one by one in MissionGroup/Buildings)" : " (merged OSM footprint boxes)")}
 
 Install: copy this zip into Documents\BeamNG.drive\<version>\mods\
 The level then appears in Freeroam as '{levelTitle}'.
@@ -677,9 +708,10 @@ The level then appears in Freeroam as '{levelTitle}'.
         }
 
         /// <summary>
-        /// Real building meshes (swissBUILDINGS3D): triangles in terrain coordinates with absolute altitude.
+        /// One swissBUILDINGS3D building as its own Collada shape. Vertices are relative to the
+        /// building centre so the TSStatic can be selected, moved or deleted individually.
         /// </summary>
-        private string BuildBuildingsColladaFromMeshes(List<GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.MeshTriangle> meshes, float floor, float half)
+        private string BuildSingleBuildingCollada(GameRealisticMap.ManMade.Buildings.SwissBuildings3dDownloader.BuildingMesh mesh, float cx, float cy, float cz)
         {
             var positions = new StringBuilder();
             var normals = new StringBuilder();
@@ -687,11 +719,11 @@ The level then appears in Freeroam as '{levelTitle}'.
             var vertexCount = 0;
             var normalCount = 0;
             var culture = System.Globalization.CultureInfo.InvariantCulture;
-            foreach (var triangle in meshes)
+            foreach (var triangle in mesh.Triangles)
             {
-                var a = new System.Numerics.Vector3(triangle.A.X - half, triangle.A.Y - half, triangle.A.Z - floor);
-                var b = new System.Numerics.Vector3(triangle.B.X - half, triangle.B.Y - half, triangle.B.Z - floor);
-                var c = new System.Numerics.Vector3(triangle.C.X - half, triangle.C.Y - half, triangle.C.Z - floor);
+                var a = new System.Numerics.Vector3(triangle.A.X - cx, triangle.A.Y - cy, triangle.A.Z - cz);
+                var b = new System.Numerics.Vector3(triangle.B.X - cx, triangle.B.Y - cy, triangle.B.Z - cz);
+                var c = new System.Numerics.Vector3(triangle.C.X - cx, triangle.C.Y - cy, triangle.C.Z - cz);
                 var normal = System.Numerics.Vector3.Cross(b - a, c - a);
                 var length = normal.Length();
                 if (length < 0.0001f)

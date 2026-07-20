@@ -17,6 +17,15 @@ namespace GameRealisticMap.ManMade.Buildings
     {
         public record struct MeshTriangle(Vector3 A, Vector3 B, Vector3 C);
 
+        /// <summary>
+        /// One building: in the DXF each building is a separate POLYLINE polyface mesh, so they
+        /// stay individually addressable (one editable object per building in the target engine).
+        /// </summary>
+        public sealed class BuildingMesh
+        {
+            public List<MeshTriangle> Triangles { get; } = new List<MeshTriangle>();
+        }
+
         public static void Lv95ToWgs84(double e, double n, out double lat, out double lon)
         {
             var y = (e - 2600000) / 1000000;
@@ -27,7 +36,7 @@ namespace GameRealisticMap.ManMade.Buildings
             lat = phi * 100 / 36;
         }
 
-        public static async Task<List<MeshTriangle>> LoadAsync(IProgressScope scope, ITerrainArea area)
+        public static async Task<List<BuildingMesh>> LoadAsync(IProgressScope scope, ITerrainArea area)
         {
             var bounds = new LatLngBounds(area);
             var cacheDir = Path.Combine(Path.GetTempPath(), "SwisstopoBuildingsCache");
@@ -62,7 +71,7 @@ namespace GameRealisticMap.ManMade.Buildings
             }
             scope.WriteLine($"Found {urls.Count} building tiles.");
 
-            var triangles = new List<MeshTriangle>();
+            var buildings = new List<BuildingMesh>();
             using var report = scope.CreateInteger("swissBUILDINGS3D", urls.Count);
             var done = 0;
             foreach (var url in urls)
@@ -75,7 +84,7 @@ namespace GameRealisticMap.ManMade.Buildings
                 }
                 try
                 {
-                    await ParseDxfZip(localZipPath, area, triangles).ConfigureAwait(false);
+                    await ParseDxfZip(localZipPath, area, buildings).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -84,18 +93,18 @@ namespace GameRealisticMap.ManMade.Buildings
                 done++;
                 report.Report(done);
             }
-            scope.WriteLine($"swissBUILDINGS3D: {triangles.Count} triangles within map bounds.");
-            return triangles;
+            scope.WriteLine($"swissBUILDINGS3D: {buildings.Count} buildings ({buildings.Sum(b => b.Triangles.Count)} triangles) within map bounds.");
+            return buildings;
         }
 
-        private static async Task ParseDxfZip(string zipPath, ITerrainArea area, List<MeshTriangle> triangles)
+        private static async Task ParseDxfZip(string zipPath, ITerrainArea area, List<BuildingMesh> buildings)
         {
             using var archive = ZipFile.OpenRead(zipPath);
             foreach (var entry in archive.Entries.Where(e => e.FullName.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)))
             {
                 using var stream = entry.Open();
                 using var reader = new StreamReader(stream);
-                await ParseDxf(reader, area, triangles).ConfigureAwait(false);
+                await ParseDxf(reader, area, buildings).ConfigureAwait(false);
             }
         }
 
@@ -104,8 +113,10 @@ namespace GameRealisticMap.ManMade.Buildings
         /// (swissBUILDINGS3D 2.0 stores buildings as polyface meshes: POLYLINE followed by
         /// VERTEX records — flag 192 = mesh vertex, flag 128 = face with 1-based indices in 71..74).
         /// </summary>
-        private static async Task ParseDxf(StreamReader reader, ITerrainArea area, List<MeshTriangle> triangles)
+        private static async Task ParseDxf(StreamReader reader, ITerrainArea area, List<BuildingMesh> buildings)
         {
+            // Triangles of the POLYLINE currently being read (one polyface mesh = one building)
+            var triangles = new List<MeshTriangle>();
             var size = area.SizeInMeters;
             var corners = new double[4][]; // e, n, alt per corner (3DFACE)
             for (var i = 0; i < 4; i++)
@@ -154,6 +165,13 @@ namespace GameRealisticMap.ManMade.Buildings
                 }
                 meshVertices.Clear();
                 meshFaces.Clear();
+                if (triangles.Count > 0)
+                {
+                    var building = new BuildingMesh();
+                    building.Triangles.AddRange(triangles);
+                    buildings.Add(building);
+                    triangles.Clear();
+                }
             }
 
             while ((codeLine = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
