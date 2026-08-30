@@ -1,75 +1,77 @@
 # Game Realistic Map (Boosted Edition)
 
+*(English: [README.en.md](README.en.md).)*
+
 ![](./GameRealisticMap.Studio/Resources/Icons/grms128.png)
 
-This fork is a heavily upgraded version of Game Realistic Map, specifically tailored to maximize performance, add high-resolution data support, and introduce advanced terrain generation features.
+Ce fork est une version fortement remaniée de Game Realistic Map, taillée pour la performance, les données haute résolution et des fonctions de génération de terrain avancées.
 
-**Download: see [Releases](https://github.com/Valou130901/ArmaRealMap_boosted_edition/releases) — unzip and run `GameRealisticMap.Studio.exe` (.NET 8 Desktop Runtime required).**
+**Téléchargement : voir les [Releases](https://github.com/Valou130901/ArmaRealMap_boosted_edition/releases) — dézippe et lance `GameRealisticMap.Studio.exe` (runtime .NET 8 Desktop requis).**
 
-📖 **[Complete user guide](docs/user-guide.md)** — full walkthrough of every feature. Island mode internals & performance tuning: [docs/boosted-edition.md](docs/boosted-edition.md). BeamNG.drive export: [docs/beamng.md](docs/beamng.md).
+📖 **[Guide utilisateur complet](docs/user-guide.fr.md)** — toutes les fonctions pas à pas. Détails du mode île et réglages de performance : [docs/boosted-edition.fr.md](docs/boosted-edition.fr.md). Export BeamNG.drive : [docs/beamng.fr.md](docs/beamng.fr.md).
 
-🇫🇷 **[Guide utilisateur complet (français)](docs/user-guide.fr.md)** — le [guide Boosted Edition](docs/boosted-edition.fr.md) et l'[export BeamNG.drive](docs/beamng.fr.md).
+🇬🇧 **[Complete user guide (English)](docs/user-guide.md)** — the [Boosted Edition guide](docs/boosted-edition.md) and the [BeamNG.drive export](docs/beamng.md).
 
-## 🚀 Boosted Edition Exclusive Features
+## 🚀 Ce que la Boosted Edition ajoute
 
-### ⚡ Maximum Performance (100% CPU Utilization)
-All arbitrary thread limits have been removed: object generation, image conversion, geometry filling, satellite water tinting, island elevation processing and PBO model preparation all run fully parallel on every logical core.
+### ⚡ Performance maximale (100 % du CPU)
+Toutes les limites de threads arbitraires ont sauté : génération des objets, conversion d'images, remplissage géométrique, teinte satellite de l'eau, altimétrie du mode île et préparation des modèles PBO tournent en parallèle sur tous les cœurs logiques.
 
-### 🏔️ Swisstopo swissALTI3D Support
-Added experimental, automatic integration for **Swisstopo swissALTI3D** high-resolution elevation data. When generating Swiss maps, the engine utilizes ultra-precise topography for breathtaking realism.
+### 🏔️ Altimétrie Swisstopo swissALTI3D
+Intégration automatique des données d'élévation haute résolution **Swisstopo swissALTI3D**. Sur une carte suisse, le moteur travaille sur une topographie ultra-précise.
 
-### 🏝️ Advanced Island Mode
-Turn any OSM administrative boundary into an island with natural coastlines:
-* **Continuous coast profile**: the terrain blends smoothly from the real inland elevation down to a seabed profile — gentle beaches on low coasts, progressive cliffs on high coasts (blend ramp scales with coast elevation, capped at ~12% slope). The ocean floor (-50m) is reached ~500m from the boundary. No more trenches or walls along the coast.
-* **Anti-Flooding Security**: land inside the boundary is guaranteed to stay above sea level (0.2m minimum), enforced again after the road/river constraint solver so river mouths and coastal roads cannot dig below the ocean.
-* **Proper seabed rendering**: outside the boundary, the ground texture is forced to ocean ground (OSM land-use no longer leaks onto the seabed) and the satellite image is depth-tinted water.
-* **Fast on any grid size**: the boundary polygon is rasterized once instead of millions of point-in-polygon tests — the island elevation pass takes seconds even on 8192x8192 grids.
+### 🚗 Export BeamNG.drive
+Construis un niveau BeamNG jouable, soit **directement depuis les données réelles** (éditeur de config → *Générer un niveau BeamNG.drive*), soit **depuis un monde Arma** que tu possèdes déjà. Sur une carte suisse, l'interrupteur Swisstopo qui donne l'altimétrie apporte aussi les vrais bâtiments, les vrais arbres et la vraie photo aérienne :
+* **Volumes swissBUILDINGS3D** avec leurs vraies toitures. La donnée ne contient que de la géométrie : murs et toits sont donc distingués par l'inclinaison de chaque face et dépliés en mètres, une tuile de façade couvrant un étage — une fenêtre fait la même taille sur tous les bâtiments.
+* **Arbres réels par la canopée** : swissSURFACE3D moins le terrain, chaque sommet local est un arbre qui existe vraiment, à la hauteur qu'il a vraiment. L'espèce vient de cette hauteur ; les couronnes posées sur un toit ou au-dessus d'une chaussée sont supprimées.
+* **Sol SWISSIMAGE** au lieu de Sentinel-2, et maillages Arma issus de la bibliothèque partagée pour les arbres, les roches et les tabliers de pont.
+* `tools/check-beamng-export.py` lit un zip exporté et rend un rapport sur les normales, les textures, le profil des routes, les carrefours, les ponts, l'altitude de la forêt et les points de spawn — chaque contrôle existe parce qu'un vrai défaut est passé devant.
 
-### 📦 Fast Built-in PBO Compiler
-The built-in mod packaging tool (Options → Arma 3 → uncheck *Use PboProject*) has been heavily optimized:
-* Model preparation is parallel and reuses cached copies between runs (near-instant on re-runs).
-* Model class detection reads only the P3D header instead of parsing the full ODOL.
-* No dependency on Mikero's tools, and immune to the MakePbo lake-on-map-edge crash.
+Voir [docs/beamng.fr.md](docs/beamng.fr.md).
 
-### 🗺️ Enhanced SatMap & IdMap Workflow
-* **SatMap Reconstruction**: Regenerate a corrected satellite map (`satmap_corrected.png`) from your edited `IdMap` via a dedicated button. It fills each surface with its **real in-game ground texture** (grass, asphalt, sand…) then Gaussian-blurs the result, matching the soft look of a natively generated GRM satmap — ideal after painting new roads or water.
-* **Improved UI & Nominatim Search**: The Nominatim search shows full boundary names instead of raw IDs. Selecting an island boundary auto-centers the map and sizes it to fit (+20% margin).
+### 🏝️ Mode île avancé
+Transforme n'importe quelle limite administrative OSM en île avec des côtes naturelles :
+* **Profil de côte continu** : le terrain descend du relief réel jusqu'au profil des fonds — plages douces sur les côtes basses, falaises progressives sur les hautes, la rampe s'adaptant à l'altitude du bord et plafonnée à ~12 % de pente. Le fond (-50 m) est atteint à ~500 m de la limite. Plus de tranchée ni de mur le long de la côte.
+* **Sécurité anti-noyade** : la terre à l'intérieur de la limite reste au-dessus du niveau de la mer (0,2 m minimum), garanti à nouveau après le solveur de contraintes routes/rivières, pour qu'une embouchure ou une route côtière ne puisse pas creuser sous l'océan.
+* **Fond marin correct** : hors de la limite, la texture du sol est forcée en fond océanique — l'occupation du sol OSM ne déborde plus dessus — et l'image satellite est teintée selon la profondeur.
+* **Rapide quelle que soit la grille** : le polygone est rastérisé une fois au lieu de millions de tests point-dans-polygone, la passe d'altimétrie insulaire prend quelques secondes même en 8192×8192.
 
-### 📥 Import Existing Maps (game & mods)
-Import any Arma 3 map (official or from a mod) to edit it: **Fichier → Import a map from game or mods**.
-* Scans the game, active mods and the whole Workshop; **junk entries from protected/obfuscated PBOs are filtered out**.
-* Extracts the wrp (binarized OPRW supported), config, roads and **imagery layers wherever they live** — `.paa` tiles are decoded to PNG, binarized rvmat converted back to text, so satmap & id map become editable.
-* Optional **custom PBO prefix / world name** to build your own independent version instead of overriding the original map.
+### 📦 Compilateur PBO intégré rapide
+L'outil d'empaquetage intégré (Options → Arma 3 → décocher *Use PboProject*) a été largement optimisé :
+* Préparation des modèles parallèle, avec réutilisation des copies en cache entre deux passages (quasi instantané en reprise).
+* Détection de classe par lecture du seul en-tête P3D, au lieu de parser l'ODOL entier.
+* Aucune dépendance aux outils de Mikero, et immunité au plantage MakePbo sur un lac en bord de carte.
 
-### 🌲 Reduce Objects by Type
-The **Réduire** tool can now thin out a whole category at once — tick *"Par type (motif)"* or use the quick buttons **Arbres / Buissons / Herbe / Rochers**. One rule reduces every matching model (e.g. remove half of all trees) instead of one model at a time. A **"Supprimer tous les objets"** button clears the map to start from scratch.
+### 🗺️ SatMap et IdMap
+* **Reconstruction de la SatMap** : régénère une image satellite corrigée (`satmap_corrected.png`) depuis ton `IdMap` retouché. Chaque surface est remplie avec sa **vraie texture de sol en jeu** (herbe, asphalte, sable…) puis floutée en gaussienne, pour retrouver le rendu doux d'une satmap générée nativement — parfait après avoir peint des routes ou de l'eau.
+* **Recherche Nominatim améliorée** : noms de limites complets au lieu d'identifiants bruts. Choisir une limite d'île centre la carte et l'ajuste automatiquement (+20 % de marge).
 
-### 🚗 BeamNG.drive Export
-Build a drivable BeamNG level either **straight from real-world data** (map config editor → *Generate a BeamNG.drive level*) or **from an Arma world** you already have. On Swiss maps the same Swisstopo switch that gives high-res elevation also brings in real buildings, real trees and real aerial imagery:
-* **swissBUILDINGS3D volumes** with their true roof shapes, walls and roofs told apart by face tilt and unwrapped in metres so a window is the same size on every building.
-* **Real trees from the canopy**: swissSURFACE3D minus the terrain, every local high point a tree that actually stands there at the height it actually has — species chosen from that height, crowns on roofs and over carriageways dropped.
-* **SWISSIMAGE ground** instead of Sentinel-2, and Arma meshes from the shared model library for trees, rocks and bridge decks.
-* `tools/check-beamng-export.py` reads an exported zip and reports on normals, textures, road profile, junctions, bridges, forest altitude and spawn points — every check there because a real defect once shipped past it.
+### 📥 Importer une carte existante (jeu et mods)
+Importe n'importe quelle carte Arma 3, officielle ou issue d'un mod, pour l'éditer : **Fichier → Importer une carte depuis le jeu ou les mods**.
+* Balaie le jeu, les mods actifs et tout le Workshop ; **les entrées parasites des PBO protégés ou obfusqués sont écartées**.
+* Extrait le wrp (OPRW binarisé pris en charge), la config, les routes et **les couches d'imagerie où qu'elles soient** — les tuiles `.paa` sont décodées en PNG, les rvmat binarisés reconvertis en texte, donc satmap et id map redeviennent éditables.
+* **Préfixe PBO et nom de monde personnalisés** en option, pour construire ta propre version indépendante au lieu d'écraser la carte d'origine.
 
-See [docs/beamng.md](docs/beamng.md).
+### 🌲 Réduire les objets par type
+L'outil **Réduire** peut éclaircir toute une catégorie d'un coup — coche *« Par type (motif) »* ou utilise les boutons **Arbres / Buissons / Herbe / Rochers**. Une seule règle traite tous les modèles correspondants (retirer la moitié des arbres, par exemple) au lieu d'un modèle à la fois. Un bouton **« Supprimer tous les objets »** repart de zéro.
 
-### ⛏️ Minecraft / WorldPainter Export
-Export the elevation grid as a **16-bit grayscale heightmap PNG** (+ a readme documenting altitudes, sea level and scale) ready to import in WorldPainter for a 1:1 Minecraft world.
+### ⛏️ Export Minecraft / WorldPainter
+Exporte la grille d'élévation en **PNG niveaux de gris 16 bits** (avec un readme documentant altitudes, niveau de la mer et échelle), prêt à importer dans WorldPainter pour un monde Minecraft au 1:1.
 
-### 📦 Upgraded Engine Dependencies
-Integrated an upgraded `bis-file-formats` library bringing:
-* Drastically reduced memory usage for WRP files.
-* Support for Arma 3's **ODOL v75** models and **Sqfc** compiled formats.
-* PAA encoder fixes and migration to modern ImageSharp for robust texture processing.
+### 📦 Dépendances moteur mises à niveau
+Bibliothèque `bis-file-formats` remise à jour :
+* Consommation mémoire des WRP nettement réduite.
+* Prise en charge des modèles **ODOL v75** et des formats compilés **Sqfc** d'Arma 3.
+* Corrections de l'encodeur PAA et passage à ImageSharp pour un traitement de textures robuste.
 
 ---
 
-*(All base features from the original Game Realistic Map toolchain are still supported.)*
+*(Toutes les fonctions d'origine de Game Realistic Map restent disponibles.)*
 
-## Data sources used in this edition
-  - NASA SRTM (automatic)
-  - JAXA AW3D30 (automatic)
-  - OpenStreetMap (automatic)
-  - Sentinel-2 cloudless (automatic)
-  - **Swisstopo swissALTI3D (exclusive to this fork)**
-  - **Swisstopo swissSURFACE3D, swissBUILDINGS3D and SWISSIMAGE (BeamNG export)**
+## Sources de données utilisées
+  - NASA SRTM (automatique)
+  - JAXA AW3D30 (automatique)
+  - OpenStreetMap (automatique)
+  - Sentinel-2 cloudless (automatique)
+  - **Swisstopo swissALTI3D (exclusif à ce fork)**
+  - **Swisstopo swissSURFACE3D, swissBUILDINGS3D et SWISSIMAGE (export BeamNG)**
