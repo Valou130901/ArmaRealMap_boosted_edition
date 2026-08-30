@@ -9,15 +9,9 @@
   "aoMacroTexSize": 100,
   "baseColorBaseTex": "/levels/east_coast_usa/art/terrains/t_terrain_base_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.319999993,
-   0
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/east_coast_usa/art/terrains/t_grass1_b.png",
-  "baseColorMacroStrength": [
-   0.100000001,
-   0.400000006
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/east_coast_usa/art/terrains/t_macro_grass_b.png",
   "baseColorMacroTexSize": 100,
   "detailDistAtten": [
@@ -81,15 +75,9 @@
   "aoMacroTex": "/levels/gridmap_v2/art/terrains/t_macro_rocky_ao.png",
   "baseColorBaseTex": "/levels/gridmap_v2/art/terrains/t_terrain_base_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.25,
-   0.25
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/gridmap_v2/art/terrains/t_dirt_loose_b.png",
-  "baseColorMacroStrength": [
-   0.100000001,
-   0.200000003
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/gridmap_v2/art/terrains/t_macro_rocky_b.png",
   "detailDistance": 25,
   "detailSize": 2,
@@ -145,15 +133,9 @@
   "aoMacroTex": "/levels/gridmap_v2/art/terrains/t_macro_clumpy_ao.png",
   "baseColorBaseTex": "/levels/gridmap_v2/art/terrains/t_terrain_base_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.25,
-   0.25
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/gridmap_v2/art/terrains/t_beachsand_b.png",
-  "baseColorMacroStrength": [
-   0.0500000007,
-   0.100000001
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/gridmap_v2/art/terrains/t_macro_clumpy_b.png",
   "detailDistance": 25,
   "detailSize": 2,
@@ -208,15 +190,9 @@
   "aoMacroTexSize": 10,
   "baseColorBaseTex": "/levels/east_coast_usa/art/terrains/t_terrain_base_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.25,
-   0.25
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/east_coast_usa/art/terrains/t_rock_eca_b.png",
-  "baseColorMacroStrength": [
-   0.200000003,
-   0.300000012
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/east_coast_usa/art/terrains/t_rocks_pac_b.png",
   "baseColorMacroTexSize": 10,
   "detailDistances": [
@@ -274,15 +250,9 @@
   "aoMacroTexSize": 80,
   "baseColorBaseTex": "/levels/east_coast_usa/art/terrains/t_terrain_base02_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.349999994,
-   0
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/east_coast_usa/art/terrains/t_asphalt_02_b.png",
-  "baseColorMacroStrength": [
-   0.300000012,
-   0.300000012
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/east_coast_usa/art/terrains/t_macro_asphalt_b.png",
   "baseColorMacroTexSize": 80,
   "groundmodelName": "ASPHALT",
@@ -334,16 +304,10 @@
   "aoMacroTexSize": 10,
   "baseColorBaseTex": "/levels/Utah/art/terrains/t_terrain_base_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.3,
-   0.3
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/Utah/art/terrains/t_gravels_b.png",
   "baseColorDetailTexSize": 2,
-  "baseColorMacroStrength": [
-   0.1,
-   0.25
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/Utah/art/terrains/t_macro_clumpy_b.png",
   "baseColorMacroTexSize": 10,
   "detailDistAtten": [
@@ -412,15 +376,9 @@
   "aoMacroTexSize": 40,
   "baseColorBaseTex": "/levels/gridmap_v2/art/terrains/t_terrain_base_b.png",
   "baseColorBaseTexSize": 2048,
-  "baseColorDetailStrength": [
-   0.25,
-   0.25
-  ],
+  "baseColorDetailStrength": [0.15, 0.0],
   "baseColorDetailTex": "/levels/gridmap_v2/art/terrains/t_concrete_gm_b.png",
-  "baseColorMacroStrength": [
-   0.100000001,
-   0.100000001
-  ],
+  "baseColorMacroStrength": [0.05, 0.1],
   "baseColorMacroTex": "/levels/gridmap_v2/art/terrains/t_macro_holes_b.png",
   "baseColorMacroTexSize": 40,
   "detailDistance": 25,

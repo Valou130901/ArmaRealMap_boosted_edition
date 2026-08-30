@@ -103,13 +103,9 @@ namespace GameRealisticMap.Arma3.Edit.Imagery
                 if (!materials.TryGetValue(texture, out var material))
                 {
                     // Texture unknown to the material library (happens with imported game maps):
-                    // generate a stable ad-hoc material so the id map can still be reconstructed
-                    var hash = 17;
-                    foreach (var c in texture.ToLowerInvariant())
-                    {
-                        hash = hash * 31 + c;
-                    }
-                    material = new TerrainMaterial(texture, texture, new Rgb24((byte)(hash >> 16), (byte)(hash >> 8), (byte)hash), null);
+                    // generate a stable ad-hoc material so the id map can still be reconstructed.
+                    // Shared with the Surface Painter export so both compute the same colour.
+                    material = new TerrainMaterial(texture, texture, IdMapHelper.GetStableId(texture), null);
                     materials.Add(texture, material);
                 }
                 return material;

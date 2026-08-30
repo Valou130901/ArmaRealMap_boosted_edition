@@ -21,5 +21,9 @@ namespace GameRealisticMap.Studio.AssetBrowser.Explorer
         [Export]
         public static readonly MenuItemDefinition GdtMenuItem = new CommandMenuItemDefinition<ViewGdtBrowserCommandDefinition>(
             ToolsArma3MenuGroup, 1);
+
+        [Export]
+        public static readonly MenuItemDefinition ReforgerLibraryMenuItem = new CommandMenuItemDefinition<BuildReforgerLibraryCommandDefinition>(
+            ToolsArma3MenuGroup, 2);
     }
 }

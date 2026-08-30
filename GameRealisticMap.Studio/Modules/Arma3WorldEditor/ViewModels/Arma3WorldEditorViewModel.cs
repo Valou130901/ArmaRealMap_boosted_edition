@@ -24,6 +24,7 @@ using GameRealisticMap.Studio.Modules.Arma3Data.Services;
 using GameRealisticMap.Studio.Modules.Arma3Data.ViewModels;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.BeamNG;
+using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Export.Reforger;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.Import;
 using GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels.MassEdit;
 using GameRealisticMap.Studio.Modules.AssetBrowser.ViewModels;
@@ -36,6 +37,7 @@ using Gemini.Framework;
 using Gemini.Framework.Services;
 using Microsoft.Win32;
 using Pmad.HugeImages;
+using Pmad.HugeImages.Processing;
 using Pmad.HugeImages.Storage;
 using Pmad.ProgressTracking;
 using SixLabors.ImageSharp;
@@ -587,6 +589,115 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
             }
         }
 
+        public bool CanExportSurfacePainter => _imagery != null;
+
+        /// <summary>
+        /// Exports the two files Surface Painter needs: the surface mask (the id map, saved as a
+        /// TIFF) and the matching .cfg listing every layer with its legend colour. The colours are
+        /// the material ids already used in the id map, so the mask and the legend always agree.
+        /// </summary>
+        public async Task ExportSurfacePainter()
+        {
+            if (_imagery != null)
+            {
+                var dialog = new SaveFileDialog();
+                dialog.Filter = "Surface Painter mask (TIFF)|*.tiff";
+                dialog.FileName = Path.GetFileNameWithoutExtension(FileName) + ".tiff";
+                if (dialog.ShowDialog() == true)
+                {
+                    var filename = dialog.FileName;
+                    var library = await GetExportMaterialLibrary();
+                    var imagery = _imagery;
+                    // The layers come from the map itself (the rvmats its cells reference), so this
+                    // works on imported game maps too, not only on maps we generated
+                    var usedTextures = World != null
+                        ? await IdMapHelper.GetUsedTextureList(World, arma3Data.ProjectDrive)
+                        : new List<GroundDetailTexture>();
+                    var idMap = imagery.GetIdMap(arma3Data.ProjectDrive, library);
+                    _ = IoC.Get<IProgressTool>()
+                        .RunTask("Export for Surface Painter", ui => DoExportSurfacePainter(ui, filename, idMap, library.Definitions, usedTextures, imagery));
+                }
+            }
+        }
+
+        private async Task DoExportSurfacePainter(IProgressTaskUI ui, string tiffFile, HugeImage<Rgb24> idMap,
+            List<TerrainMaterialDefinition> materials, List<GroundDetailTexture> usedTextures, ExistingImageryInfos imagery)
+        {
+            OverrideImageSharpSizeLimit();
+            using (var task = ui.Scope.CreateSingle("Write mask"))
+            using (idMap)
+            {
+                using var image = new Image<Rgb24>(idMap.Size.Width, idMap.Size.Height);
+                // Native-size 1:1 copy: no scaling means no interpolation, so every pixel keeps the
+                // exact material id colour the .cfg legend refers to
+                await image.MutateAsync(async i => await i.DrawHugeImageAsync(idMap, SixLabors.ImageSharp.Point.Empty, 1)).ConfigureAwait(false);
+                await image.SaveAsTiffAsync(tiffFile, new SixLabors.ImageSharp.Formats.Tiff.TiffEncoder
+                {
+                    Compression = SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Deflate,
+                    BitsPerPixel = SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit24,
+                }).ConfigureAwait(false);
+            }
+            var cfgFile = Path.ChangeExtension(tiffFile, ".cfg");
+            await File.WriteAllTextAsync(cfgFile, BuildSurfacePainterCfg(materials, usedTextures, imagery)).ConfigureAwait(false);
+            ui.Scope.WriteLine($"Wrote {Path.GetFileName(tiffFile)} and {Path.GetFileName(cfgFile)}");
+            ui.AddSuccessAction(() => ShellHelper.OpenUri(Path.GetDirectoryName(tiffFile)!), GameRealisticMap.Studio.Labels.OpenFolder);
+        }
+
+        private static string BuildSurfacePainterCfg(List<TerrainMaterialDefinition> materials,
+            List<GroundDetailTexture> usedTextures, ExistingImageryInfos imagery)
+        {
+            // Known colour texture -> its library material id. Anything the map uses but the library
+            // does not know gets the same stable hash id the id map assigned it (imported maps).
+            var libraryById = new Dictionary<string, TerrainMaterialDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var definition in materials)
+            {
+                libraryById[definition.Material.GetColorTexturePath(imagery)] = definition;
+            }
+
+            // Prefer the map's own used-texture list. Fall back to the whole library only if the map
+            // exposes nothing (e.g. imagery without a loaded world).
+            var entries = usedTextures.Count > 0
+                ? usedTextures.Select(t => t.ColorTexture)
+                : materials.Select(m => m.Material.GetColorTexturePath(imagery));
+
+            var layers = new System.Text.StringBuilder();
+            var colors = new System.Text.StringBuilder();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var texture in entries)
+            {
+                libraryById.TryGetValue(texture, out var definition);
+
+                var className = definition?.Surface?.Name;
+                if (string.IsNullOrEmpty(className))
+                {
+                    className = Path.GetFileNameWithoutExtension(texture);
+                    if (className.EndsWith("_co", StringComparison.OrdinalIgnoreCase))
+                    {
+                        className = className.Substring(0, className.Length - 3);
+                    }
+                }
+                className = new string(className.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '_').ToArray());
+                if (string.IsNullOrEmpty(className) || !seen.Add(className))
+                {
+                    continue; // Two materials mapping to the same surface: one legend entry is enough
+                }
+                // rvmat sits next to the colour texture: gdt_rock_co.paa -> gdt_rock.rvmat
+                var coIndex = texture.LastIndexOf("_co.paa", StringComparison.OrdinalIgnoreCase);
+                var rvmat = coIndex >= 0 ? texture.Substring(0, coIndex) + ".rvmat" : Path.ChangeExtension(texture, ".rvmat");
+                // Colour = library id if known, otherwise the same stable id the id map computed
+                var id = definition?.Material.Id ?? IdMapHelper.GetStableId(texture);
+
+                layers.Append("class ").Append(className).Append(" {\n");
+                layers.Append("texture = \"").Append(texture).Append("\";\n");
+                layers.Append("material = \"").Append(rvmat).Append("\";\n");
+                layers.Append("};\n");
+
+                colors.Append(className).Append("[] = {{")
+                      .Append(id.R).Append(", ").Append(id.G).Append(", ").Append(id.B).Append("}};\n");
+            }
+            return "class Layers\n{\n" + layers + "};\n\nclass Legend {\n\npicture = \"mapLegend.png\";\nclass Colors\n{\n" + colors + "};\n};\n";
+        }
+
         internal async Task<TerrainMaterialLibrary> GetExportMaterialLibrary()
         {
             var lib = IoC.Get<GdtBrowserViewModel>();
@@ -924,9 +1035,41 @@ namespace GameRealisticMap.Studio.Modules.Arma3WorldEditor.ViewModels
                         idMap = _imagery.GetIdMap(arma3Data.ProjectDrive, materialLibrary);
                     }
                     ProgressToolHelper.Start(new ExportBeamNGLevelTask(
-                        _world, Path.GetFileNameWithoutExtension(FileName), satMap, idMap, materialDefs, roads?.Roads, arma3Data.Library, dialog.FileName));
+                        _world, Path.GetFileNameWithoutExtension(FileName), satMap, idMap, materialDefs, roads?.Roads,
+                        arma3Data.Library, dialog.FileName, arma3Data.ProjectDrive, ConfigFile?.InitialContent,
+                        Path.GetDirectoryName(FileName)));
                 }
             }
+        }
+
+        /// <summary>
+        /// Converts the open world into an Arma Reforger import pack (heightmap, imagery, object
+        /// placements per family, and the GRM Workbench plugin that reads them).
+        /// </summary>
+        public async Task ExportReforgerPack()
+        {
+            if (_world == null)
+            {
+                return;
+            }
+            var worldName = Path.GetFileNameWithoutExtension(FileName);
+            var dialog = new OpenFolderDialog();
+            dialog.Title = "Select the folder to write the Arma Reforger import pack into";
+            dialog.DefaultDirectory = Path.GetDirectoryName(FileName);
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+            var targetDirectory = Path.Combine(dialog.FolderName, worldName + "-reforger");
+
+            var satMap = _imagery?.GetSatMap(arma3Data.ProjectDrive);
+            HugeImage<Rgb24>? idMap = null;
+            if (_imagery != null)
+            {
+                idMap = _imagery.GetIdMap(arma3Data.ProjectDrive, await GetExportMaterialLibrary());
+            }
+            ProgressToolHelper.Start(new ExportReforgerPackTask(
+                _world, worldName, satMap, idMap, arma3Data.Library, arma3Data.ProjectDrive, targetDirectory));
         }
 
         public Task ExportHeightmapBeamNG()

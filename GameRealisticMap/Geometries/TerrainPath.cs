@@ -327,7 +327,10 @@ namespace GameRealisticMap.Geometries
 #if DEBUG
                 else
                 {
-                    throw new InvalidOperationException("Unsupported edge case");
+                    // Real world data hits this (clipping introduces points that are not in the
+                    // source path). Release builds already fall through and keep the original
+                    // orientation, so only trace it instead of aborting the whole generation.
+                    Debug.WriteLine("TerrainPath.KeepOrientation: closed path, no reference point kept after clipping.");
                 }
 #endif
             }
@@ -377,7 +380,9 @@ namespace GameRealisticMap.Geometries
 #if DEBUG
                 else
                 {
-                    throw new InvalidOperationException("Unsupported edge case");
+                    // Same as above: no point of the clipped segment matches a source point, so
+                    // the orientation cannot be checked. Keep it as is, like Release does.
+                    Debug.WriteLine("TerrainPath.KeepOrientation: clipped segment shares no point with the source path.");
                 }
 #endif
             }

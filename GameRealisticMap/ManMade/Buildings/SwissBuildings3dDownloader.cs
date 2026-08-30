@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Numerics;
 using System.Text.Json;
@@ -45,30 +45,13 @@ namespace GameRealisticMap.ManMade.Buildings
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("User-Agent", "GameRealisticMap/1.0");
 
-            var stacUrl = FormattableString.Invariant(
-                $"https://data.geo.admin.ch/api/stac/v0.9/collections/ch.swisstopo.swissbuildings3d_2/items?bbox={bounds.Left},{bounds.Bottom},{bounds.Right},{bounds.Top}&limit=200");
+            var stacUrl = Configuration.SwisstopoStac.ItemsUrl("ch.swisstopo.swissbuildings3d_2", bounds);
 
             scope.WriteLine("Querying Swisstopo STAC API (swissBUILDINGS3D 2.0)...");
-            var urls = new List<string>();
-            var response = await httpClient.GetStringAsync(stacUrl).ConfigureAwait(false);
-            using (var json = JsonDocument.Parse(response))
-            {
-                foreach (var item in json.RootElement.GetProperty("features").EnumerateArray())
-                {
-                    foreach (var asset in item.GetProperty("assets").EnumerateObject())
-                    {
-                        if (asset.Name.EndsWith(".dxf.zip", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var href = asset.Value.GetProperty("href").GetString();
-                            if (!string.IsNullOrEmpty(href))
-                            {
-                                urls.Add(href);
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
+            var urls = await Configuration.SwisstopoStac.GetAssetHrefsAsync(
+                httpClient, stacUrl, name => name.EndsWith(".dxf.zip", StringComparison.OrdinalIgnoreCase))
+                .ConfigureAwait(false);
+
             scope.WriteLine($"Found {urls.Count} building tiles.");
 
             var buildings = new List<BuildingMesh>();

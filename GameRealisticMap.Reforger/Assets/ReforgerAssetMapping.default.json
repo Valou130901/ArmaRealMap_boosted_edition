@@ -1,18 +1,128 @@
+// Maps Arma 3 model names (file name without extension) to Arma Reforger prefab ResourceNames.
+// A ResourceName looks like "{GUID}Prefabs/.../name.et". Every GUID below was read out of the
+// vanilla Arma Reforger resourceDatabase.rdb, not guessed.
+//
+// Resolution order: exact match first, then the first keyword rule whose any token appears in the
+// model name, then the global fallback.
+//
+// Arma 3 Mediterranean flora has no counterpart in Reforger, whose vegetation set is central
+// European. Species are matched on silhouette and volume, not botany: ficus to hornbeam, olive to
+// apple, cypress to spruce, oleander to elder. Limestone is matched to granite for the same reason.
+//
+// Buildings are deliberately left unmapped: Reforger has no Mediterranean housing, and an
+// approximation would be worse than a gap. They come out in port-worklist.csv for the model port
+// pipeline. Models with no mapping are exported as 7-token lines with no prefab.
+//
+// To add a prefab: in Enfusion Resource Manager, right-click the .et and Copy resource name.
 {
-  "_comment": [
-    "Maps Arma 3 model names (as resolved by the loaded GRM asset config) to Arma Reforger prefab ResourceNames.",
-    "A ResourceName looks like \"{GUID}Prefabs/.../name.et\". The GUID is stable for vanilla assets.",
-    "Only the spruce GUID below is confirmed from the Import Objects Extended example file.",
-    "To get a GUID for any other prefab: in Enfusion Resource Manager, right-click the .et > Copy resource name.",
-    "Models with no mapping are exported WITHOUT a prefab (7-token lines): assign a prefab pool per-layer",
-    "in the 'Import Objects Extended' tool UI when importing that layer's .csv."
-  ],
-  "exact": {},
+  "exact": {
+    // Trees: Malden broadleaves and cypresses, by size class
+    "t_ficusb1s_f": "{F89B942712FD22D6}Prefabs/Vegetation/Tree/t_carpinus_betulus/t_carpinus_betulus_2s.et",
+    "t_ficusb2s_f": "{8F91FCAFE65FCDA6}Prefabs/Vegetation/Tree/t_carpinus_betulus/t_carpinus_betulus_3s.et",
+    "t_ficus_3d_f": "{B5D57F1F1C796A66}Prefabs/Vegetation/Tree/t_carpinus_betulus/t_carpinus_betulus_3d.et",
+    "t_oleae1s_f": "{1C6F9AD2669C17F9}Prefabs/Vegetation/Tree/t_malus_domestica/t_malus_domestica_2s.et",
+    "t_oleae2s_f": "{1C6F9AD2669C17F9}Prefabs/Vegetation/Tree/t_malus_domestica/t_malus_domestica_2s.et",
+    "t_broussonetiap1s_f": "{1C6F9AD2669C17F9}Prefabs/Vegetation/Tree/t_malus_domestica/t_malus_domestica_2s.et",
+    "t_cupressus_stricta_2s_f": "{A975A81D02F4862C}Prefabs/Vegetation/Tree/t_picea_abies/t_picea_abies_2s.et",
+    "t_cupressus_stricta_3s_f": "{DE7FC095F656695C}Prefabs/Vegetation/Tree/t_picea_abies/t_picea_abies_3s.et",
+    "t_fraxinusav2s_f": "{C46F2709EDF643D4}Prefabs/Vegetation/Tree/t_tilia_cordata/t_tilia_cordata_3s.et",
+
+    // Bushes: oleander and shrub ficus to elder and hazel, grapevine to a low sprawling bush
+    "b_neriumo2d_f": "{BAB8054438C72A04}Prefabs/Vegetation/Bush/b_sambucus_nigra_2.et",
+    "b_neriumo2s_f": "{D6EC31A48403A52A}Prefabs/Vegetation/Bush/b_sambucus_nigra_1.et",
+    "b_neriumo2s_white_f": "{D6EC31A48403A52A}Prefabs/Vegetation/Bush/b_sambucus_nigra_1.et",
+    "b_ficusc1s_f": "{C98A6C1C2372354E}Prefabs/Vegetation/Bush/b_corylus_avellana_1.et",
+    "b_ficusc2s_f": "{A5DE58FC9FB6BA60}Prefabs/Vegetation/Bush/b_corylus_avellana_2.et",
+    "b_ficusc2d_f": "{A5DE58FC9FB6BA60}Prefabs/Vegetation/Bush/b_corylus_avellana_2.et",
+    "b_vitis_vinifera_f": "{0CA0547EB03759E1}Prefabs/Vegetation/Bush/b_rubus_idaeus_1s.et",
+    "b_opuntiaficusindica3s_f": "{F55BF63BAD1DCB7E}Prefabs/Vegetation/Bush/b_juniperus_communis_2s.et",
+
+    // Rocks: Malden limestone to granite, same silhouette family
+    "limestone_01_01_lc_f": "{3F68EE5DCB004B10}Prefabs/Rocks/Granite/GraniteCliff_01.et",
+    "limestone_01_02_lc_f": "{533CDABD77C4C43E}Prefabs/Rocks/Granite/GraniteCliff_02.et",
+    "limestone_01_03_lc_f": "{B6A096447B215355}Prefabs/Rocks/Granite/GraniteCliff_03.et",
+    "limestone_01_01_f": "{9633134198F3AB1A}Prefabs/Rocks/Granite/GraniteRock_01.et",
+    "limestone_01_02_f": "{FA6727A124372434}Prefabs/Rocks/Granite/GraniteRock_02.et",
+    "limestone_01_03_f": "{1FFB6B5828D2B35F}Prefabs/Rocks/Granite/GraniteRock_03.et",
+    "limestone_01_erosion_f": "{450AAF1BC197F8C9}Prefabs/Rocks/Granite/Granite_Cluster_01.et",
+    "limestone_01_apart_f": "{295E9BFB7D5377E7}Prefabs/Rocks/Granite/Granite_Cluster_02.et",
+    "limestone_01_spike_f": "{FA6727A124372434}Prefabs/Rocks/Granite/GraniteRock_02.et",
+    "limestone_01_wallh_f": "{3F68EE5DCB004B10}Prefabs/Rocks/Granite/GraniteCliff_01.et",
+    "limestone_01_wallv_f": "{533CDABD77C4C43E}Prefabs/Rocks/Granite/GraniteCliff_02.et",
+
+    // Sea rocks: a3\rocks_f\water holds rocks standing in the sea, matched to the beach granite set
+    "w_sharpstone_01": "{07FBB9A2F51332E4}Prefabs/Rocks/Granite/Granite_BeachStone_01.et",
+    "w_sharpstone_02": "{6BAF8D4249D7BDCA}Prefabs/Rocks/Granite/Granite_BeachStone_02.et",
+    "w_sharpstone_03": "{8E33C1BB45322AA1}Prefabs/Rocks/Granite/Granite_BeachStone_03.et",
+    "w_sharprock_wallh": "{45BE489A63A25CA6}Prefabs/Rocks/Granite/Granite_BeachCluster_01.et",
+    "w_sharpstones_erosion": "{29EA7C7ADF66D388}Prefabs/Rocks/Granite/Granite_BeachCluster_02.et",
+    "w_sharprock_monolith": "{735E970ACBB1B473}Prefabs/Rocks/Granite/Granite_Boulder_01.et",
+
+    // Walls: segment lengths matched where Reforger has one, otherwise the nearest size
+    "stone_8m_f": "{EEE23553967B32A8}Prefabs/Structures/Walls/Stone/StoneWall_01/StoneWall_01_8m.et",
+    "stone_8md_f": "{978C4CF5B4BD882E}Prefabs/Structures/Walls/Stone/StoneWall_01/StoneWall_01_8m_End.et",
+    "stone_4m_f": "{20304FC74D23C37F}Prefabs/Structures/Walls/Stone/StoneWall_01/StoneWall_01_4m_A.et",
+    "stone_pillar_f": "{07714A54E04065E2}Prefabs/Structures/Walls/Stone/StoneWall_02/StoneWall_02_pole.et",
+    "city_8m_f": "{EEE23553967B32A8}Prefabs/Structures/Walls/Stone/StoneWall_01/StoneWall_01_8m.et",
+    "city2_8m_f": "{EEE23553967B32A8}Prefabs/Structures/Walls/Stone/StoneWall_01/StoneWall_01_8m.et",
+    "mound01_8m_f": "{323D779591F59437}Prefabs/Structures/Walls/Concrete/ConcreteRetainingWall_02/ConcreteRetainingWall_02_8m_grass.et",
+    "mound02_8m_f": "{323D779591F59437}Prefabs/Structures/Walls/Concrete/ConcreteRetainingWall_02/ConcreteRetainingWall_02_8m_grass.et",
+    "wall_indcnc_4_f": "{879865F07EA907B0}Prefabs/Structures/Walls/Concrete/ConcreteWall_02/ConcreteWall_02_4m.et",
+    "concrete_smallwall_4m_f": "{879865F07EA907B0}Prefabs/Structures/Walls/Concrete/ConcreteWall_02/ConcreteWall_02_4m.et",
+    "concrete_smallwall_8m_f": "{FD1CE2903D41D4A7}Prefabs/Structures/Walls/Concrete/ConcreteRetainingWall_01/ConcreteRetainingWall_01_8m.et",
+    "wall_tin_4_2": "{DF3905E54137495D}Prefabs/Structures/Walls/Metal/TinWall_01/TinWall_01_3m.et",
+    "new_wiredfence_10m_f": "{274AAC76FBF110BD}Prefabs/Structures/Walls/Net/NetFence_01/NetFence_01_2m.et",
+    "vineyardfence_01_f": "{4A9F6EFA33F8FBE0}Prefabs/Structures/Walls/Wooden/WoodenFence_01/WoodenFence_01_4m.et",
+
+    // Power: Malden uses the Tanoa powerline set
+    "powerline_01_wire_50m_f": "{61F3EF2C0B1BD187}Prefabs/Structures/Infrastructure/Power/Powerlines/PowerLine_01/PowerLine_01_wire_50m.et",
+    "powerline_01_wire_50m_main_f": "{61F3EF2C0B1BD187}Prefabs/Structures/Infrastructure/Power/Powerlines/PowerLine_01/PowerLine_01_wire_50m.et",
+    "powerline_01_pole_small_f": "{64EDA881A2C6291C}Prefabs/Structures/Infrastructure/Power/Powerlines/PowerLine_01/PowerLine_01_pole_small_hook.et"
+  },
+
   "keywords": [
     {
-      "match": ["picea", "spruce", "fir_", "_fir", "pine", "pinus", "larix", "larch", "conifer", "abies"],
-      "prefab": "{83E7EA2D55140839}Prefabs/Vegetation/Tree/t_picea_abies_1f.et"
+      // Underwater flora first, so the generic bush rules never drop a juniper on the seabed
+      "match": ["bw_set", "seaweed", "coral", "_algae"],
+      "prefab": null
+    },
+    {
+      "match": ["picea", "spruce", "fir_", "_fir", "pine", "pinus", "larix", "larch", "conifer", "abies", "cupressus", "cypress", "juniperus"],
+      "prefab": "{DE7FC095F656695C}Prefabs/Vegetation/Tree/t_picea_abies/t_picea_abies_3s.et"
+    },
+    {
+      "match": ["olea", "olive", "malus", "prunus", "broussonetia", "citrus"],
+      "prefab": "{1C6F9AD2669C17F9}Prefabs/Vegetation/Tree/t_malus_domestica/t_malus_domestica_2s.et"
+    },
+    {
+      "match": ["t_ficus", "fraxinus", "quercus", "populus", "acer_", "tilia", "ulmus", "salix"],
+      "prefab": "{F89B942712FD22D6}Prefabs/Vegetation/Tree/t_carpinus_betulus/t_carpinus_betulus_2s.et"
+    },
+    {
+      "match": ["b_ficus", "nerium", "b_corylus", "sambucus", "hedge", "shrub"],
+      "prefab": "{D6EC31A48403A52A}Prefabs/Vegetation/Bush/b_sambucus_nigra_1.et"
+    },
+    {
+      "match": ["vitis", "rubus", "opuntia", "b_arundo", "b_ruscus"],
+      "prefab": "{0CA0547EB03759E1}Prefabs/Vegetation/Bush/b_rubus_idaeus_1s.et"
+    },
+    {
+      "match": ["limestone", "w_sharprock", "w_sharpstone", "boulder", "_rock", "rock_"],
+      "prefab": "{9633134198F3AB1A}Prefabs/Rocks/Granite/GraniteRock_01.et"
+    },
+    {
+      "match": ["wiredfence", "chainlink", "netfence"],
+      "prefab": "{274AAC76FBF110BD}Prefabs/Structures/Walls/Net/NetFence_01/NetFence_01_2m.et"
+    },
+    {
+      "match": ["woodenfence", "fence_wood", "plot_"],
+      "prefab": "{4A9F6EFA33F8FBE0}Prefabs/Structures/Walls/Wooden/WoodenFence_01/WoodenFence_01_4m.et"
+    },
+    {
+      "match": ["powerline", "power_line"],
+      "prefab": "{61F3EF2C0B1BD187}Prefabs/Structures/Infrastructure/Power/Powerlines/PowerLine_01/PowerLine_01_wire_50m.et"
     }
   ],
+
   "fallback": null
 }

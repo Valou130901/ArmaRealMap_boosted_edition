@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using GameRealisticMap.Arma3.TerrainBuilder;
 using GameRealisticMap.ElevationModel;
 
@@ -13,7 +14,7 @@ namespace GameRealisticMap.Reforger
     /// </remarks>
     public sealed class ReforgerObject
     {
-        public ReforgerObject(string? prefab, double x, double y, double z, double pitch, double yaw, double roll, double scale)
+        public ReforgerObject(string? prefab, double x, double y, double z, double pitch, double yaw, double roll, double scale, string? modelName = null)
         {
             Prefab = prefab;
             X = x;
@@ -23,7 +24,15 @@ namespace GameRealisticMap.Reforger
             Yaw = yaw;
             Roll = roll;
             Scale = scale;
+            ModelName = modelName;
         }
+
+        /// <summary>Source Arma 3 model this placement came from, kept for reporting and for the model port pipeline.</summary>
+        public string? ModelName { get; }
+
+        /// <summary>False when the source transform was degenerate and produced a NaN angle.</summary>
+        public bool IsValid => !double.IsNaN(Yaw) && !double.IsNaN(Pitch) && !double.IsNaN(Roll)
+            && !double.IsNaN(X) && !double.IsNaN(Y) && !double.IsNaN(Z);
 
         /// <summary>Reforger prefab ResourceName (<c>{GUID}Prefabs/.../name.et</c>), or null for a pool-driven placement.</summary>
         public string? Prefab { get; }
@@ -57,7 +66,48 @@ namespace GameRealisticMap.Reforger
                 pitch: obj.Pitch,
                 yaw: obj.Yaw,
                 roll: obj.Roll,
-                scale: obj.Scale);
+                scale: obj.Scale,
+                modelName: obj.Model.Name);
+        }
+
+        /// <summary>
+        /// Builds a placement straight from a world transform read in a wrp file, without needing the
+        /// p3d to be readable: the position is taken from the translation row and the angles are
+        /// decomposed the same way <see cref="TerrainBuilderObject"/> does.
+        /// </summary>
+        /// <remarks>
+        /// Used to convert an existing Arma 3 map. The Arma engine frame (X east, Y up, Z north,
+        /// origin at the south-west terrain corner) matches the Enfusion world frame one-to-one, so
+        /// the translation is copied verbatim.
+        /// </remarks>
+        public static ReforgerObject FromWrpMatrix(Matrix4x4 wrpMatrix, string? prefab, string? modelName = null)
+        {
+            var rotateOnly = wrpMatrix;
+            rotateOnly.M41 = 0;
+            rotateOnly.M42 = 0;
+            rotateOnly.M43 = 0;
+
+            var scale = 1f;
+            if (Matrix4x4.Decompose(wrpMatrix, out var decomposedScale, out _, out _))
+            {
+                scale = decomposedScale.X; // Assume uniform scale, like the Terrain Builder export
+                if (scale != 1f && Matrix4x4.Invert(Matrix4x4.CreateScale(decomposedScale), out var invertScale))
+                {
+                    rotateOnly = rotateOnly * invertScale;
+                }
+            }
+
+            const double toDegrees = 180.0 / Math.PI;
+            return new ReforgerObject(
+                prefab,
+                x: wrpMatrix.M41,
+                y: wrpMatrix.M42,
+                z: wrpMatrix.M43,
+                pitch: Math.Asin(Math.Clamp(-rotateOnly.M23, -1.0, 1.0)) * toDegrees,
+                yaw: -Math.Atan2(rotateOnly.M13, rotateOnly.M33) * toDegrees,
+                roll: Math.Atan2(rotateOnly.M21, rotateOnly.M22) * toDegrees,
+                scale: scale,
+                modelName: modelName);
         }
 
         /// <summary>

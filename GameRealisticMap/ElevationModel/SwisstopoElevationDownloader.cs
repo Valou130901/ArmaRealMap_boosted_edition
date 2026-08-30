@@ -107,28 +107,11 @@ namespace GameRealisticMap.ElevationModel
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("User-Agent", "GameRealisticMap/1.0");
 
-            string stacUrl = $"https://data.geo.admin.ch/api/stac/v0.9/collections/ch.swisstopo.swissalti3d/items?bbox={bounds.Left.ToString(System.Globalization.CultureInfo.InvariantCulture)},{bounds.Bottom.ToString(System.Globalization.CultureInfo.InvariantCulture)},{bounds.Right.ToString(System.Globalization.CultureInfo.InvariantCulture)},{bounds.Top.ToString(System.Globalization.CultureInfo.InvariantCulture)}&limit=200";
-            
-            scope.WriteLine("Querying Swisstopo STAC API...");
-            var response = await httpClient.GetStringAsync(stacUrl);
-            using var json = JsonDocument.Parse(response);
-            
-            var items = json.RootElement.GetProperty("features");
-            var urlsToDownload = new List<string>();
+            var stacUrl = Configuration.SwisstopoStac.ItemsUrl("ch.swisstopo.swissalti3d", bounds);
 
-            foreach (var item in items.EnumerateArray())
-            {
-                var assets = item.GetProperty("assets");
-                var assetProps = assets.EnumerateObject();
-                foreach(var prop in assetProps)
-                {
-                    if (prop.Name.Contains("_2_2056_5728.xyz.zip"))
-                    {
-                        urlsToDownload.Add(prop.Value.GetProperty("href").GetString());
-                        break;
-                    }
-                }
-            }
+            scope.WriteLine("Querying Swisstopo STAC API...");
+            var urlsToDownload = await Configuration.SwisstopoStac.GetAssetHrefsAsync(
+                httpClient, stacUrl, name => name.Contains("_2_2056_5728.xyz.zip"));
 
             scope.WriteLine($"Found {urlsToDownload.Count} 2m resolution XYZ tiles.");
 

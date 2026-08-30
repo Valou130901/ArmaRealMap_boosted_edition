@@ -6,9 +6,9 @@ This fork is a heavily upgraded version of Game Realistic Map, specifically tail
 
 **Download: see [Releases](https://github.com/Valou130901/ArmaRealMap_boosted_edition/releases) — unzip and run `GameRealisticMap.Studio.exe` (.NET 8 Desktop Runtime required).**
 
-📖 **[Complete user guide](docs/user-guide.md)** — full walkthrough of every feature. Island mode internals & performance tuning: [docs/boosted-edition.md](docs/boosted-edition.md).
+📖 **[Complete user guide](docs/user-guide.md)** — full walkthrough of every feature. Island mode internals & performance tuning: [docs/boosted-edition.md](docs/boosted-edition.md). BeamNG.drive export: [docs/beamng.md](docs/beamng.md).
 
-🇫🇷 **[Guide utilisateur complet (français)](docs/user-guide.fr.md)** — et le [guide Boosted Edition](docs/boosted-edition.fr.md).
+🇫🇷 **[Guide utilisateur complet (français)](docs/user-guide.fr.md)** — le [guide Boosted Edition](docs/boosted-edition.fr.md) et l'[export BeamNG.drive](docs/beamng.fr.md).
 
 ## 🚀 Boosted Edition Exclusive Features
 
@@ -44,6 +44,15 @@ Import any Arma 3 map (official or from a mod) to edit it: **Fichier → Import 
 ### 🌲 Reduce Objects by Type
 The **Réduire** tool can now thin out a whole category at once — tick *"Par type (motif)"* or use the quick buttons **Arbres / Buissons / Herbe / Rochers**. One rule reduces every matching model (e.g. remove half of all trees) instead of one model at a time. A **"Supprimer tous les objets"** button clears the map to start from scratch.
 
+### 🚗 BeamNG.drive Export
+Build a drivable BeamNG level either **straight from real-world data** (map config editor → *Generate a BeamNG.drive level*) or **from an Arma world** you already have. On Swiss maps the same Swisstopo switch that gives high-res elevation also brings in real buildings, real trees and real aerial imagery:
+* **swissBUILDINGS3D volumes** with their true roof shapes, walls and roofs told apart by face tilt and unwrapped in metres so a window is the same size on every building.
+* **Real trees from the canopy**: swissSURFACE3D minus the terrain, every local high point a tree that actually stands there at the height it actually has — species chosen from that height, crowns on roofs and over carriageways dropped.
+* **SWISSIMAGE ground** instead of Sentinel-2, and Arma meshes from the shared model library for trees, rocks and bridge decks.
+* `tools/check-beamng-export.py` reads an exported zip and reports on normals, textures, road profile, junctions, bridges, forest altitude and spawn points — every check there because a real defect once shipped past it.
+
+See [docs/beamng.md](docs/beamng.md).
+
 ### ⛏️ Minecraft / WorldPainter Export
 Export the elevation grid as a **16-bit grayscale heightmap PNG** (+ a readme documenting altitudes, sea level and scale) ready to import in WorldPainter for a 1:1 Minecraft world.
 
@@ -63,3 +72,4 @@ Integrated an upgraded `bis-file-formats` library bringing:
   - OpenStreetMap (automatic)
   - Sentinel-2 cloudless (automatic)
   - **Swisstopo swissALTI3D (exclusive to this fork)**
+  - **Swisstopo swissSURFACE3D, swissBUILDINGS3D and SWISSIMAGE (BeamNG export)**
